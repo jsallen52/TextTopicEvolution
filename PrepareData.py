@@ -1,5 +1,4 @@
 import pandas as pd
-from pandas import json_normalize
 
 def GetDataFrame(fileName, textColumnName, dateColumnName):
     # df = pd.read_csv(fileName)

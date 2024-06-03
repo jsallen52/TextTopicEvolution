@@ -1,11 +1,8 @@
-import pyLDAvis
 from sklearn.decomposition import NMF, PCA, LatentDirichletAllocation
 from sklearn.manifold import TSNE
 import streamlit as st
 import pandas as pd
 import numpy as np
-from matplotlib import pyplot as plt
-import matplotlib.dates as mdates
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from PrepareData import AssignTimeInterval, GetDataFrame

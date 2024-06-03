@@ -1,16 +1,4 @@
-import pandas as pd
-import numpy as np
-from matplotlib import pyplot as plt
-import matplotlib.dates as mdates
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.feature_extraction.text import TfidfVectorizer
-
-from PrepareData import GetDataFrame
-
 import plotly.graph_objects as go
-
-# def PlotOverTime(ax, grouped_df, lineColor): 
-#     ax.plot(grouped_df['TimeInterval'], grouped_df['Count'], color=lineColor)
     
 def CreateDocTimeFig(df, primaryColor, topicCount, topicColors):
     fig = go.Figure()

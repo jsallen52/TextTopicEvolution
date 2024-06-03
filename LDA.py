@@ -1,11 +1,4 @@
 import pandas as pd
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.decomposition import LatentDirichletAllocation
-from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize
-import string
-import pyLDAvis.lda_model
-import matplotlib.pyplot as plt
 
 def GetTopics(model, vectorizer, wordsPerTopic):
     words = vectorizer.get_feature_names_out()

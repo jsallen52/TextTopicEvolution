@@ -1,4 +1,3 @@
-import nltk
 from nltk import word_tokenize, pos_tag
 
 def filter_nouns(text):
