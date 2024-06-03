@@ -5,7 +5,7 @@ This application visualizes the evolution of topics in textual data using NMF an
 ## Setup
 
 1. Clone the repository.
-2. Install the required dependencies by running `pip install -r requirements.txt`.
+2. Install the required dependencies by navigating to the cloned folder and running `pip install -r dependencies.txt`.
 3. Install NLTK data for parts of speech model.
     - Run python interpreter and type commands:
     - import nltk
