@@ -1,3 +1,4 @@
+import os
 from sklearn.decomposition import NMF, PCA, LatentDirichletAllocation
 from sklearn.manifold import TSNE
 import streamlit as st
@@ -5,7 +6,8 @@ import pandas as pd
 import numpy as np
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfVectorizer
-from PrepareData import AssignTimeInterval, GetDataFrame
+from FlagFrequencies import CreateWordsOverTimeChart
+from PrepareData import AssignTimeInterval, GetDataFrame, GetFullDataFrame
 from DocumentsOverTime import CreateDocTimeFig
 from LDA import GetTopics
 
@@ -25,16 +27,37 @@ dataFileName = '2020_2023.json'
 textColumnName = 'cm_probableCause'
 dateColumnName = 'cm_eventDate'
 
-# Create init dataframe
-df = GetDataFrame(dataFileName, textColumnName, dateColumnName)
-
 # Title of the app
-st.title('Incident Documents Analysis')
+st.title('Text Topic Analysis')
+
+# Find all .json or .csv files in the root folder
+all_files = [f for f in os.listdir('.') if f.endswith(('.json', '.csv'))]
 
 #-------Filters Side Bar-----------------------------------
-with st.sidebar.form(key='filter_form'):
 
+dataFileName = st.sidebar.selectbox('Data Source', all_files, index = all_files.index(dataFileName))
+
+with st.sidebar.form(key='filter_form'):
     st.header('General Filters')
+    
+    df = GetFullDataFrame(dataFileName)
+    #Gets all columns that are non integers and so will be converted into strings
+    all_columns = df.select_dtypes(include=['object']).columns.tolist()
+    
+    textIndex = 0
+    if(dataFileName == '2020_2023.json'):
+        textIndex = all_columns.index(textColumnName)
+    textColumnName = st.selectbox('Text Column',all_columns, index=textIndex, key="text_column_name")
+    
+    dateIndex = 0
+    #Gets all columns with values that can be converted to dates
+    date_columns = [col for col in all_columns if pd.to_datetime(df[col], errors='coerce').notnull().all()]
+    if(dataFileName == '2020_2023.json'):
+        dateIndex = date_columns.index(dateColumnName)
+    dateColumnName = st.selectbox('Date Column', date_columns,index=dateIndex, key="date_column_name")
+    
+    # Create init dataframe
+    df = GetDataFrame(dataFileName, textColumnName, dateColumnName)
     
     start_date, end_date = st.date_input(
         "Select Date Range",
@@ -78,7 +101,6 @@ with st.sidebar.form(key='filter_form'):
     
     # Submit button
     st.form_submit_button(label='Apply Filters')
-
 #-------------------------------------------------------------
 df = df[(df[dateColumnName] >= pd.to_datetime(start_date)) & (df[dateColumnName] <= pd.to_datetime(end_date))]
 
@@ -111,6 +133,7 @@ all_stop_words = list(CountVectorizer(stop_words='english').get_stop_words()) if
 if(useAdditionalStopWords):
     all_stop_words = all_stop_words + additional_stop_words
 
+# CHECK THIS LINE MAYBE GET RID OF MAX_DF , max_df=0.95, min_df=2
 vectorizer = CountVectorizer(stop_words=all_stop_words, max_df=0.95, min_df=2)
 
 docTermMatrix = vectorizer.fit_transform(df[textColumnName])
@@ -132,10 +155,8 @@ with col3:
 st.write('\n')
 # Get feature names (words) from the vectorizer
 feature_names = vectorizer.get_feature_names_out()
-
 # Get the word counts for each feature (word) across all text entries
 word_counts = docTermMatrix.sum(axis=0).A1
-
 # Create a DataFrame to store feature names and their corresponding word counts
 word_count_df = pd.DataFrame({'Word': feature_names, 'Word Count': word_counts})
 # Sort the DataFrame by word counts in descending order to get the most common words
@@ -165,9 +186,64 @@ fig.update_yaxes(
     ticklabelposition="inside",  # Position tick labels inside to save space
 )
 
+#-----------Animatated Chart-----------------
+
+
+# terms = vectorizer.get_feature_names_out()
+# docTermArray = docTermMatrix.toarray()
+# # timeIntervals = df['TimeInterval'].unique()
+
+# dfTermMatrix = pd.DataFrame(docTermArray, columns=terms)
+# dfTermMatrix['TimeInterval'] = df['TimeInterval'].values
+
+# dfTermMatrix = dfTermMatrix.reset_index(drop=True)
+
+# # Melt the DataFrame to get the desired format
+# dfMelted = dfTermMatrix.melt(id_vars='TimeInterval', var_name='Term', value_name='Count')
+
+# dfGrouped = dfMelted.groupby(['TimeInterval', 'Term'], as_index=False).sum()
+# timeIntervals = dfGrouped['TimeInterval'].unique()
+
+# # Get top words from first time interval
+# firstInterval = dfGrouped[dfGrouped['TimeInterval'] == timeIntervals[0]]
+# sortedDf = firstInterval.sort_values(by='Count', ascending=False)
+# topWords = sortedDf.head(topWordCount)['Term'].values
+
+# dfGroupedTopWords = dfGrouped[dfGrouped['Term'].isin(topWords)]
+
+# fig = px.bar(
+#     dfGroupedTopWords, 
+#     x='Count', 
+#     y='Term', 
+#     animation_frame='TimeInterval',    
+#     orientation='h',
+#     category_orders={'Term': sorted(dfGroupedTopWords['Term'].unique())},
+#     range_y=[min(dfGroupedTopWords['Term'].unique()), max(dfGroupedTopWords['Term'].unique())],
+#     height= 400 + (topWordCount * 10),
+#     hover_name='Term',
+#     hover_data={'Count': ':d'},
+#     title='Frequency of Top Words per Interval',
+# )
+
+# fig.update_yaxes(
+#     tickvals=dfGroupedTopWords['Term'].unique(),
+#     tickmode='array',
+#     tick0=min(dfGroupedTopWords['Term'].unique()),
+#     dtick=1,
+#     showgrid=False,
+#     title_standoff=0,
+#     showticklabels=True)
+
+# fig.update_xaxes(showgrid=True, range=[0, dfGroupedTopWords['Count'].max()])
+
 st.plotly_chart(fig, use_container_width=True)
 
-#--LDA---------------------------------------------
+#------Flagged Words Chart--------------------------
+flagWordsChart = CreateWordsOverTimeChart(df, textColumnName,dateColumnName, docTermMatrix, feature_names)
+
+st.plotly_chart(flagWordsChart, use_container_width=True)
+
+#--Topic Extraction---------------------------------------------
 useNMF = (selectedAlgo == 'NMF')
 
 if(useNMF):
@@ -178,7 +254,8 @@ if(useNMF):
 if(not useNMF):
     topicExtractionModel = LatentDirichletAllocation(n_components=numTopics, max_iter=50, learning_method='online')
 else:
-     topicExtractionModel = NMF(n_components=numTopics, random_state=42)
+    # random state controls the stochastic element to ensure teh same output is generated
+    topicExtractionModel = NMF(n_components=numTopics, random_state=42)
 
 documentTopicDistributions = topicExtractionModel.fit_transform(docTermMatrix)
 docTopics = np.argmax(documentTopicDistributions, axis=1)
@@ -279,7 +356,7 @@ st.plotly_chart(docFig)
 
 #---Topic Map---------------------------------
 ldaComponents = topicExtractionModel.components_
-reducedTopicWordMatrix = TSNE(n_components=2, perplexity=3).fit_transform(topicExtractionModel.components_)
+reducedTopicWordMatrix = TSNE(n_components=2, perplexity=numTopics-1).fit_transform(topicExtractionModel.components_)
 
 documentMapHeight = 400
 fig = px.scatter(
@@ -330,9 +407,10 @@ fig = px.scatter(x=reducedTopicDistributions[:, 0],
                  title="Document Map",)
 
 # Map colors based on the values of df['Topic']
+
 fig.update_traces(
     marker=dict(
-        color=df['Topic'].map(dict(zip(df['Topic'].unique(), topicColors))),
+        color=df['Topic'].map(dict(zip(range(numTopics), topicColors))),
         colorscale='Viridis'
     )
 )

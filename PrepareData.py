@@ -1,8 +1,19 @@
 import pandas as pd
 
+def GetFullDataFrame(fileName):
+    if(fileName.endswith('.json')):
+        df = pd.read_json(fileName)
+    else:
+        df = pd.read_csv(fileName)
+    return df
+
 def GetDataFrame(fileName, textColumnName, dateColumnName):
     # df = pd.read_csv(fileName)
-    df = pd.read_json(fileName)
+    
+    if(fileName.endswith('.json')):
+        df = pd.read_json(fileName)
+    else:
+        df = pd.read_csv(fileName)
     
     df = df[[dateColumnName, textColumnName]]
     df = df.dropna(subset=[textColumnName, dateColumnName], inplace=False) 
