@@ -9,7 +9,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from FlagFrequencies import CreateWordsOverTimeChart
 from PrepareData import AssignTimeInterval, GetDataFrame, GetFullDataFrame
 from DocumentsOverTime import CreateDocTimeFig
-from LDA import GetTopics
+from TopicExtraction import GetTopicDocumentStats, GetTopics
 
 import plotly.express as px
 import plotly.graph_objects as go
@@ -102,7 +102,7 @@ with st.sidebar.form(key='filter_form'):
     # Submit button
     st.form_submit_button(label='Apply Filters')
 #-------------------------------------------------------------
-df = df[(df[dateColumnName] >= pd.to_datetime(start_date)) & (df[dateColumnName] <= pd.to_datetime(end_date))]
+df = df[(df[dateColumnName] >= pd.to_datetime(start_date)) & (df[dateColumnName] <= pd.to_datetime(end_date) + pd.Timedelta(days=1))]
 
 if(useNounsOnly):
     df = FilterForNouns(df, textColumnName) 
@@ -241,7 +241,8 @@ st.plotly_chart(fig, use_container_width=True)
 #------Flagged Words Chart--------------------------
 flagWordsChart = CreateWordsOverTimeChart(df, textColumnName,dateColumnName, docTermMatrix, feature_names)
 
-st.plotly_chart(flagWordsChart, use_container_width=True)
+if flagWordsChart is not None:
+    st.plotly_chart(flagWordsChart, use_container_width=True)
 
 #--Topic Extraction---------------------------------------------
 useNMF = (selectedAlgo == 'NMF')
@@ -258,10 +259,16 @@ else:
     topicExtractionModel = NMF(n_components=numTopics, random_state=42)
 
 documentTopicDistributions = topicExtractionModel.fit_transform(docTermMatrix)
+
+topic_columns = [f'Topic {i}' for i in range(numTopics)]
+dfTopicDistributions = pd.DataFrame(documentTopicDistributions, columns=topic_columns)
+
 docTopics = np.argmax(documentTopicDistributions, axis=1)
 df['Topic'] = docTopics
+dfTopicDistributions['Topic'] = docTopics
 
 topicDFfs = GetTopics(topicExtractionModel, vectorizer, wordsPerTopic)
+
 
 #--Topic Word Charts-----------------------------
 
@@ -322,7 +329,9 @@ for i in range(numTopics):
         fig.update_xaxes(showticklabels=False)
         st.plotly_chart(fig, use_container_width=True)
         
-        
+#----Topic Spread box Plot----------------------------------------
+st.plotly_chart(GetTopicDocumentStats(dfTopicDistributions, numTopics, topicColors))
+
 #--Documents Per Topic Chart---------------------------------
 topic_document_count_df = df.groupby('Topic').size().reset_index(name='Document Count')
 topic_document_count_df['Topic'] += 1
@@ -347,8 +356,8 @@ fig.update_layout(
 
 st.plotly_chart(fig, use_container_width=True)
 
+#--Documents Over Time Chart---------------------------------
 #-------------------------------------------------------------
-# check boxes for each topic
 
 primaryColor =  "#31333F"
 docFig = CreateDocTimeFig(df, primaryColor, numTopics, topicColors)
@@ -437,6 +446,7 @@ st.plotly_chart(fig, use_container_width=True)
 
 #----Raw Data----------------------------------------
 displayDF = GetDataFrame(dataFileName, textColumnName, dateColumnName)
+displayDF = displayDF[(displayDF[dateColumnName] >= pd.to_datetime(start_date)) & (displayDF[dateColumnName] <= pd.to_datetime(end_date) + pd.Timedelta(days=1))]
 st.subheader("Raw Data")
 st.markdown("---")
 displayDF['Topic'] = df['Topic'] + 1

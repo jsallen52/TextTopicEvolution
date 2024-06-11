@@ -30,53 +30,57 @@ import plotly.graph_objects as go
 
 # print(topTenArray)
 
-def GetTopWords(df, textColumnName, dateColumnName):
+def GetTopRecentWordsTFIDF(df, textColumnName, dateColumnName, numWords):
     df['Month'] = df[dateColumnName].dt.to_period('M')
 
     interval_df = df.groupby('Month')[textColumnName].apply(lambda x: ' '.join(x)).reset_index()
     
-    vectorizer = TfidfVectorizer(stop_words='english',  max_df=0.95, min_df=2)
+    vectorizer = TfidfVectorizer(stop_words='english',  max_df=0.95)
     docTermMatrix = vectorizer.fit_transform(interval_df[textColumnName])
 
     lastRow = pd.DataFrame(docTermMatrix.toarray(), columns=vectorizer.get_feature_names_out()).tail(1).reset_index(drop=True).T
 
     lastRowSorted = lastRow.sort_values(0, ascending=False)
 
-    topTenArray = lastRowSorted.index[:10].values
+    topTenArray = lastRowSorted.index[:numWords].values
     
     return topTenArray
-
-
+    
 
 def CreateWordsOverTimeChart(df, textColumnName, DateColumnName, docTermMatrix, featureNames):
-    # vectorizer = CountVectorizer(stop_words='english',  max_df=0.95)
-    # docTermMatrix = vectorizer.fit_transform(df[textColumnName])
-    # featureNames = vectorizer.get_feature_names_out()
+    vectorizer = CountVectorizer(stop_words='english',  max_df=0.95)
+    docTermMatrix = vectorizer.fit_transform(df[textColumnName])
+    featureNames = vectorizer.get_feature_names_out()
     
-    word_list = GetTopWords(df, textColumnName, DateColumnName)
+    word_list = GetTopRecentWordsTFIDF(df, textColumnName, DateColumnName, 10)
     
-    # Convert the result to a DataFrame
-    word_counts_df = pd.DataFrame(docTermMatrix.toarray(), columns=featureNames)
-    word_counts_df['date'] = df['TimeInterval']
-
-    # Group by date and sum the counts for each date
-    word_counts_by_date = word_counts_df.groupby('date').sum().reset_index()
-    word_counts_by_date['date'] = word_counts_by_date['date'].dt.to_timestamp()
-
-    # Create a Plotly figure
-    fig = go.Figure()
-
-    # Add a trace for each word
+    word_counts = pd.DataFrame(docTermMatrix.toarray(), columns=featureNames)
+    word_counts['TimeInterval'] = df['TimeInterval'].values
+    
     for word in word_list:
-        fig.add_trace(go.Scatter(x=word_counts_by_date['date'], y=word_counts_by_date[word], mode='lines', name=word))
+        word_counts.loc[word_counts[word] > 0, word] = 1
+        word_counts.loc[word_counts[word] == 0, word] = 0
 
-    # Update layout
-    fig.update_layout(
-        title='Word Counts Over Time',
-        xaxis_title='Date',
-        yaxis_title='Word Count',
-        legend_title='Words',
-    )
 
-    # Show the plot
-    return fig
+    # Group by timestamps and sum the word counts
+    df_grouped = word_counts.groupby('TimeInterval')[word_list].sum().reset_index()
+    
+    df_grouped['TimeInterval'] = df_grouped['TimeInterval'].dt.to_timestamp()
+
+    # Create line graph with plotly
+    data = []
+    for word in word_list:
+        if df_grouped[word].tail(1).values[0] > 2:
+            data.append(go.Scatter(x=df_grouped['TimeInterval'], y=df_grouped[word], mode='lines+markers', name=word))
+
+    layout = go.Layout(title='Flagged Words For Most Recent Time Interval',
+                    xaxis=dict(title='Time Interval'),
+                    yaxis=dict(title='Document Count'),
+                    showlegend=True)  # Show the legend even if there is only one plot
+
+    if(len(data) > 0):
+        fig = go.Figure(data=data, layout=layout)
+        # Show the plot
+        return fig
+
+    return None

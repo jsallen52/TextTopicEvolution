@@ -25,7 +25,7 @@ def CreateDocTimeFig(df, primaryColor, topicCount, topicColors):
             name=f'Topic {i}',
             line=dict(color=topicColors[i]),
             visible=visible_traces[i],
-            showlegend=False 
+            showlegend=True 
         ))
 
         # Append x and y values to the lists
@@ -41,34 +41,34 @@ def CreateDocTimeFig(df, primaryColor, topicCount, topicColors):
     if(topicCount > 9):
         topicBtnLabel = ''
 
-    # Create buttons to show each trace individually or all traces
-    buttons = [{'label': f'{topicBtnLabel}{i+1}', 'method': 'update', 'args': [{'visible': [True if j == i else False for j in range(topicCount)]}]} for i in range(topicCount)]
-    buttons.append({'label': 'Show All', 'method': 'update', 'args': [{'visible': [True] * topicCount}]})
+    # # Create buttons to show each trace individually or all traces
+    # buttons = [{'label': f'{topicBtnLabel}{i+1}', 'method': 'update', 'args': [{'visible': [True if j == i else False for j in range(topicCount)]}]} for i in range(topicCount)]
+    # buttons.append({'label': 'Show All', 'method': 'update', 'args': [{'visible': [True] * topicCount}]})
 
 
-    # Update layout with buttons and set x and y axis ranges
-    fig.update_layout(
-        xaxis=dict(
-            tickangle=45,
-            showgrid=True,
-            range=x_range  # Set x axis range
-        ),
-        yaxis=dict(
-            title='Document Count',
-            showgrid=True,
-            range=y_range  # Set y axis range
-        ),
-        title='Document Count By Topic Over Time',
-        updatemenus=[{
-            'type': 'buttons',
-            'direction': 'right',
-            'showactive': True,
-            'buttons': buttons,
-            'x': 0.5,  # Set the x position of the buttons to the center
-            'y': 1.1,  # Set the y position of the buttons to be above the chart
-            'xanchor': 'center',  # Anchor the x position to the center
-            'yanchor': 'top',  # Anchor the y position to the top
-        }],
-    )
+    # # Update layout with buttons and set x and y axis ranges
+    # fig.update_layout(
+    #     xaxis=dict(
+    #         tickangle=45,
+    #         showgrid=True,
+    #         range=x_range  # Set x axis range
+    #     ),
+    #     yaxis=dict(
+    #         title='Document Count',
+    #         showgrid=True,
+    #         range=y_range  # Set y axis range
+    #     ),
+    #     title='Document Count By Topic Over Time',
+    #     updatemenus=[{
+    #         'type': 'buttons',
+    #         'direction': 'right',
+    #         'showactive': True,
+    #         'buttons': buttons,
+    #         'x': 0.5,  # Set the x position of the buttons to the center
+    #         'y': 1.1,  # Set the y position of the buttons to be above the chart
+    #         'xanchor': 'center',  # Anchor the x position to the center
+    #         'yanchor': 'top',  # Anchor the y position to the top
+    #     }],
+    # )
 
     return fig
