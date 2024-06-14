@@ -69,6 +69,9 @@ with st.sidebar.form(key='filter_form'):
     options = ['Weekly', 'Monthly', 'Yearly']
     selectedTimeInterval = st.selectbox('Time Interval', options, index = 1)
     
+    minDocFreq = st.number_input('Minimum Document Frequency', 0, 100, 2)
+    maxDocFreq = st.number_input('Maximum Document Frequency', 0.0, 1.0, .95)
+    
     topWordCount = st.slider('Top Words', 5, 50, 20)
     
     #-------Side Bar Parts of Speech
@@ -133,8 +136,7 @@ all_stop_words = list(CountVectorizer(stop_words='english').get_stop_words()) if
 if(useAdditionalStopWords):
     all_stop_words = all_stop_words + additional_stop_words
 
-# CHECK THIS LINE MAYBE GET RID OF MAX_DF , max_df=0.95, min_df=2
-vectorizer = CountVectorizer(stop_words=all_stop_words, max_df=0.95, min_df=2)
+vectorizer = CountVectorizer(stop_words=all_stop_words, max_df=maxDocFreq, min_df=minDocFreq)
 
 docTermMatrix = vectorizer.fit_transform(df[textColumnName])
 total_words = docTermMatrix.sum()
@@ -249,7 +251,7 @@ useNMF = (selectedAlgo == 'NMF')
 
 if(useNMF):
     #NMF used TFIDF for vectorization
-    vectorizer = TfidfVectorizer(stop_words=all_stop_words, max_df=0.95, min_df=2)
+    vectorizer = TfidfVectorizer(stop_words=all_stop_words, max_df=maxDocFreq, min_df=minDocFreq)
     docTermMatrix = vectorizer.fit_transform(df[textColumnName])
     
 if(not useNMF):
@@ -357,10 +359,11 @@ fig.update_layout(
 st.plotly_chart(fig, use_container_width=True)
 
 #--Documents Over Time Chart---------------------------------
-#-------------------------------------------------------------
+docFig = CreateDocTimeFig(df, numTopics, topicColors)
+st.plotly_chart(docFig)
 
-primaryColor =  "#31333F"
-docFig = CreateDocTimeFig(df, primaryColor, numTopics, topicColors)
+#--Documents Over Time Normalized Chart---------------------------------
+docFig = CreateDocTimeFig(df, numTopics, topicColors, normalize=True)
 st.plotly_chart(docFig)
 
 #---Topic Map---------------------------------
