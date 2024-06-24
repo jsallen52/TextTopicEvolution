@@ -72,6 +72,9 @@ with st.sidebar.form(key='filter_form'):
     minDocFreq = st.number_input('Minimum Document Frequency', 0, 100, 2)
     maxDocFreq = st.number_input('Maximum Document Frequency', 0.0, 1.0, .95)
     
+    minNgram = st.number_input('Minimum NGram', 1, 3, 1)
+    maxNgram = st.number_input('Maximum NGram', 1, 4, 1)
+    
     topWordCount = st.slider('Top Words', 5, 50, 20)
     
     #-------Side Bar Parts of Speech
@@ -83,7 +86,7 @@ with st.sidebar.form(key='filter_form'):
     st.subheader('Stop Words')
     useStopWords = st.checkbox("Use Standard Stop Words", value=True, key="stop_words_checkbox")
 
-    vectorizer = CountVectorizer(stop_words= 'english' if useStopWords else None)
+    vectorizer = CountVectorizer(stop_words= 'english' if useStopWords else None, ngram_range=(minNgram, maxNgram))
     X = vectorizer.fit(df[textColumnName])
 
     useAdditionalStopWords = st.checkbox("Use Additional Stop Words", value=True, key="my_checkbox2", disabled=not useStopWords)
@@ -99,7 +102,7 @@ with st.sidebar.form(key='filter_form'):
     algoOptions = ['LDA', 'NMF']
     selectedAlgo= st.selectbox('Algorithm', algoOptions, index=1)
     
-    numTopics = st.slider('Topic Count', 3, 20, 4)
+    numTopics = st.slider('Topic Count', 3, 40, 4)
     wordsPerTopic = st.slider('Words Per Topic', 8, 15, 10)
     
     # Submit button
@@ -136,7 +139,7 @@ all_stop_words = list(CountVectorizer(stop_words='english').get_stop_words()) if
 if(useAdditionalStopWords):
     all_stop_words = all_stop_words + additional_stop_words
 
-vectorizer = CountVectorizer(stop_words=all_stop_words, max_df=maxDocFreq, min_df=minDocFreq)
+vectorizer = CountVectorizer(stop_words=all_stop_words, max_df=maxDocFreq, min_df=minDocFreq, ngram_range=(minNgram, maxNgram))
 
 docTermMatrix = vectorizer.fit_transform(df[textColumnName])
 total_words = docTermMatrix.sum()
@@ -251,7 +254,7 @@ useNMF = (selectedAlgo == 'NMF')
 
 if(useNMF):
     #NMF used TFIDF for vectorization
-    vectorizer = TfidfVectorizer(stop_words=all_stop_words, max_df=maxDocFreq, min_df=minDocFreq)
+    vectorizer = TfidfVectorizer(stop_words=all_stop_words, max_df=maxDocFreq, min_df=minDocFreq, ngram_range=(minNgram, maxNgram))
     docTermMatrix = vectorizer.fit_transform(df[textColumnName])
     
 if(not useNMF):
@@ -275,6 +278,52 @@ topicDFfs = GetTopics(topicExtractionModel, vectorizer, wordsPerTopic)
 #--Topic Word Charts-----------------------------
 
 topicColors = [
+    '#800000', 
+    '#469990', 
+    '#f58231', 
+    '#3cb44b', 
+    '#a9a9a9', 
+    '#e6194B', 
+    '#911eb4', 
+    '#42d4f4', 
+    '#aaffc3',
+    '#9A6324',
+    '#808000',
+    '#000075',
+    '#000000',
+    '#ffe119',
+    '#bfef45',
+    '#4363d8',
+    '#f032e6',
+    '#fabed4',
+    '#ffd8b1',
+    '#fffac8',
+    '#dcbeff',
+    '#fffafa',
+        
+    '#800000', 
+    '#469990', 
+    '#f58231', 
+    '#3cb44b', 
+    '#a9a9a9', 
+    '#e6194B', 
+    '#911eb4', 
+    '#42d4f4', 
+    '#aaffc3',
+    '#9A6324',
+    '#808000',
+    '#000075',
+    '#000000',
+    '#ffe119',
+    '#bfef45',
+    '#4363d8',
+    '#f032e6',
+    '#fabed4',
+    '#ffd8b1',
+    '#fffac8',
+    '#dcbeff',
+    '#fffafa',
+    
     '#800000', 
     '#469990', 
     '#f58231', 

@@ -18,6 +18,8 @@ def CreateDocTimeFig(df, topicCount, topicColors, normalize = False):
 
     x_values = []  # List to store all x values
     y_values = []  # List to store all y values
+    
+    monthTotals = df.groupby('TimeInterval').size().reset_index(name='Count')['Count']
 
     for i in range(topicCount):
         # Filter data for topic i
@@ -28,8 +30,7 @@ def CreateDocTimeFig(df, topicCount, topicColors, normalize = False):
         grouped_df['TimeInterval'] = grouped_df['TimeInterval'].dt.to_timestamp()  # Convert to datetime
         
         if normalize:
-            totalCount = grouped_df['Count'].sum()
-            grouped_df['Count'] = grouped_df['Count'] / totalCount
+            grouped_df['Count'] = grouped_df['Count'] / monthTotals
 
         # Add trace for each topic with initial visibility set to True
         fig.add_trace(go.Scatter(

@@ -45,14 +45,42 @@ def GetTopRecentWordsTFIDF(df, textColumnName, dateColumnName, numWords):
     topTenArray = lastRowSorted.index[:numWords].values
     
     return topTenArray
+
+def GetFlaggedRecentWordsZscore(df, textColumnName, dateColumnName, numWords):
+    df['Month'] = df[dateColumnName].dt.to_period('M')
+
+    vectorizer = CountVectorizer(stop_words='english')
+    docTermMatrix = vectorizer.fit_transform(df[textColumnName])
+
+    terms = vectorizer.get_feature_names_out()
+    docTermDF = pd.DataFrame(docTermMatrix.toarray(), columns=terms)
+    # docTermDF[docTermDF > 1] = 1
+
+    docTermDF['Month'] = df['Month'].values
+
+    docTermDF = docTermDF.groupby('Month').sum()
+
+    # Compute the mean and standard deviation for each term
+    mean = docTermDF.mean(axis=0)
+    # ddof=0 for population standard deviation
+    # ddof=1 for sample standard deviation
+    std = docTermDF.std(axis=0, ddof=0)  
+
+    n = len(docTermDF)
+    z_scores = abs((docTermDF - mean) / std)  # t = (docTermDF - mean) / (std / (n ** 0.5))
+
+    lastRow = z_scores.tail(1).reset_index(drop=True).T
+    lastRowSorted = lastRow.sort_values(0, ascending=False)
+    topTenArray = lastRowSorted.index[:numWords].values
     
+    return topTenArray
 
 def CreateWordsOverTimeChart(df, textColumnName, DateColumnName, docTermMatrix, featureNames):
     vectorizer = CountVectorizer(stop_words='english',  max_df=0.95)
     docTermMatrix = vectorizer.fit_transform(df[textColumnName])
     featureNames = vectorizer.get_feature_names_out()
     
-    word_list = GetTopRecentWordsTFIDF(df, textColumnName, DateColumnName, 10)
+    word_list = GetTopRecentWordsTFIDF(df, textColumnName, DateColumnName, 14)
     
     word_counts = pd.DataFrame(docTermMatrix.toarray(), columns=featureNames)
     word_counts['TimeInterval'] = df['TimeInterval'].values
@@ -67,10 +95,13 @@ def CreateWordsOverTimeChart(df, textColumnName, DateColumnName, docTermMatrix, 
     
     df_grouped['TimeInterval'] = df_grouped['TimeInterval'].dt.to_timestamp()
 
+    #minimum number of documents for word to be included in chart
+    minDocumentCount = 0
+ 
     # Create line graph with plotly
     data = []
     for word in word_list:
-        if df_grouped[word].tail(1).values[0] > 2:
+        if df_grouped[word].tail(1).values[0] >= minDocumentCount:
             data.append(go.Scatter(x=df_grouped['TimeInterval'], y=df_grouped[word], mode='lines+markers', name=word))
 
     layout = go.Layout(title='Flagged Words For Most Recent Time Interval',
