@@ -9,12 +9,16 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from FlagFrequencies import CreateWordsOverTimeChart
 from PrepareData import AssignTimeInterval, GetDataFrame, GetFullDataFrame
 from DocumentsOverTime import CreateDocTimeFig
-from TopicExtraction import GetTopicDocumentStats, GetTopics
+from TopicExtraction import GetTopicDocumentStats, GetTopics, GetTopicsBERT
 
 import plotly.express as px
 import plotly.graph_objects as go
 
 from PartsOfSpeach import FilterForNouns
+
+from bertopic import BERTopic
+from hdbscan import HDBSCAN
+from umap import UMAP
 
 additional_stop_words = []
 
@@ -96,17 +100,28 @@ with st.sidebar.form(key='filter_form'):
     if(not useStopWords):
         useAdditionalStopWords = False
         
-    #-------------------------
-
+    #-------Side Bar Topic Extraction
     st.subheader('Topic Extraction')
-    algoOptions = ['LDA', 'NMF']
-    selectedAlgo= st.selectbox('Algorithm', algoOptions, index=1)
+    algoOptions = ['LDA', 'NMF', 'BERTopic']
+    selectedAlgo = st.selectbox('Algorithm', algoOptions, index=1)
     
-    numTopics = st.slider('Topic Count', 3, 40, 4)
+    numTopicsDisabled = (selectedAlgo == 'BERTopic')
+    numTopics = st.slider('Topic Count', 3, 40, 10, disabled = numTopicsDisabled)
     wordsPerTopic = st.slider('Words Per Topic', 8, 15, 10)
     
-    # Submit button
+    #-------Submit button
     st.form_submit_button(label='Apply Filters')
+
+if(selectedAlgo == 'BERTopic'):
+    with st.sidebar.form(key='BERTopic_form'):
+        st.subheader('BERTopic Options')
+        reduceTopics = st.checkbox("Reduce Topics", value=True, key="reduceTopicsBERT", )
+        
+        numTopics = st.slider('Topic Count', 3, 40, 10, disabled = not reduceTopics)
+        
+        minClusterSize = st.slider('Minimum Cluster Size', 5, 50, 15)
+        
+        st.form_submit_button(label='Apply Options')
 #-------------------------------------------------------------
 df = df[(df[dateColumnName] >= pd.to_datetime(start_date)) & (df[dateColumnName] <= pd.to_datetime(end_date) + pd.Timedelta(days=1))]
 
@@ -252,28 +267,60 @@ if flagWordsChart is not None:
 #--Topic Extraction---------------------------------------------
 useNMF = (selectedAlgo == 'NMF')
 
-if(useNMF):
+if(selectedAlgo == 'LDA'): 
+    topicExtractionModel = LatentDirichletAllocation(n_components=numTopics, max_iter=50, learning_method='online')
+    
+elif(selectedAlgo == 'NMF'):
     #NMF used TFIDF for vectorization
     vectorizer = TfidfVectorizer(stop_words=all_stop_words, max_df=maxDocFreq, min_df=minDocFreq, ngram_range=(minNgram, maxNgram))
     docTermMatrix = vectorizer.fit_transform(df[textColumnName])
-    
-if(not useNMF):
-    topicExtractionModel = LatentDirichletAllocation(n_components=numTopics, max_iter=50, learning_method='online')
-else:
-    # random state controls the stochastic element to ensure teh same output is generated
     topicExtractionModel = NMF(n_components=numTopics, random_state=42)
+    
+elif(selectedAlgo == 'BERTopic'):
+    documents = df[textColumnName].values
 
-documentTopicDistributions = topicExtractionModel.fit_transform(docTermMatrix)
+    hdbscan = HDBSCAN(
+        min_cluster_size=minClusterSize, 
+        metric='euclidean', 
+        cluster_selection_method='eom', 
+        prediction_data=False
+    )
+    
+    umap = UMAP(
+        n_neighbors=15, 
+        n_components=5, 
+        metric='cosine',
+        random_state=42
+    )
 
-topic_columns = [f'Topic {i}' for i in range(numTopics)]
-dfTopicDistributions = pd.DataFrame(documentTopicDistributions, columns=topic_columns)
+    # Create a BERTopic model and fit it to your documents
+    bertModel = BERTopic(
+        vectorizer_model=vectorizer, 
+        hdbscan_model=hdbscan, 
+        nr_topics= (numTopics + 1) if reduceTopics else None, # +1 for outlier
+        top_n_words=wordsPerTopic
+    )
+    
+    docTopics, probs = bertModel.fit_transform(documents)
+    
+    numTopics = len(bertModel.get_topic_info()) - 1
+    
+    topicDFs = GetTopicsBERT(bertModel)
+    
+    dfTopicDistributions = pd.DataFrame({'Probs': probs})
+    dfTopicDistributions['Topic'] = docTopics
 
-docTopics = np.argmax(documentTopicDistributions, axis=1)
+if(selectedAlgo == 'LDA') or (selectedAlgo == 'NMF'):
+    documentTopicDistributions = topicExtractionModel.fit_transform(docTermMatrix)
+
+    topic_columns = [f'Topic {i}' for i in range(numTopics)]
+    dfTopicDistributions = pd.DataFrame(documentTopicDistributions, columns=topic_columns)
+
+    docTopics = np.argmax(documentTopicDistributions, axis=1)
+    dfTopicDistributions['Topic'] = docTopics
+    topicDFs = GetTopics(topicExtractionModel, vectorizer, wordsPerTopic)
+    
 df['Topic'] = docTopics
-dfTopicDistributions['Topic'] = docTopics
-
-topicDFfs = GetTopics(topicExtractionModel, vectorizer, wordsPerTopic)
-
 
 #--Topic Word Charts-----------------------------
 
@@ -299,54 +346,11 @@ topicColors = [
     '#ffd8b1',
     '#fffac8',
     '#dcbeff',
-    '#fffafa',
-        
-    '#800000', 
-    '#469990', 
-    '#f58231', 
-    '#3cb44b', 
-    '#a9a9a9', 
-    '#e6194B', 
-    '#911eb4', 
-    '#42d4f4', 
-    '#aaffc3',
-    '#9A6324',
-    '#808000',
-    '#000075',
-    '#000000',
-    '#ffe119',
-    '#bfef45',
-    '#4363d8',
-    '#f032e6',
-    '#fabed4',
-    '#ffd8b1',
-    '#fffac8',
-    '#dcbeff',
-    '#fffafa',
-    
-    '#800000', 
-    '#469990', 
-    '#f58231', 
-    '#3cb44b', 
-    '#a9a9a9', 
-    '#e6194B', 
-    '#911eb4', 
-    '#42d4f4', 
-    '#aaffc3',
-    '#9A6324',
-    '#808000',
-    '#000075',
-    '#000000',
-    '#ffe119',
-    '#bfef45',
-    '#4363d8',
-    '#f032e6',
-    '#fabed4',
-    '#ffd8b1',
-    '#fffac8',
-    '#dcbeff',
-    '#fffafa',
-    ]
+    '#fffafa',        
+]
+
+
+topicColors = topicColors * 10
 
 st.write('\n')
 
@@ -357,7 +361,7 @@ for i in range(numTopics):
         bar_cols= st.columns(chartsPerRow)
         
     with bar_cols[i % chartsPerRow]:
-        fig = go.Figure(data=[go.Bar(x=topicDFfs[i]["Frequency"], y=topicDFfs[i]["Word"], orientation='h',  marker_color=topicColors[i])])
+        fig = go.Figure(data=[go.Bar(x=topicDFs[i]["Frequency"], y=topicDFs[i]["Word"], orientation='h',  marker_color=topicColors[i])])
         # Remove axis labels
         fig.update_layout(xaxis_title='', yaxis_title='', height=figHeights)
         fig.update_layout(
@@ -381,10 +385,15 @@ for i in range(numTopics):
         st.plotly_chart(fig, use_container_width=True)
         
 #----Topic Spread box Plot----------------------------------------
-st.plotly_chart(GetTopicDocumentStats(dfTopicDistributions, numTopics, topicColors))
+probColumn = None
+if(selectedAlgo == 'BERTopic'):
+    probColumn = 'Probs'
+
+st.plotly_chart(GetTopicDocumentStats(dfTopicDistributions, numTopics, topicColors, probColumn))
 
 #--Documents Per Topic Chart---------------------------------
-topic_document_count_df = df.groupby('Topic').size().reset_index(name='Document Count')
+dfAssignedDocs = df[df['Topic'] >= 0]
+topic_document_count_df = dfAssignedDocs.groupby('Topic').size().reset_index(name='Document Count')
 topic_document_count_df['Topic'] += 1
 topic_document_count_df['Topic'] = 'Topic ' + topic_document_count_df['Topic'].astype(str)
 
@@ -416,85 +425,87 @@ docFig = CreateDocTimeFig(df, numTopics, topicColors, normalize=True)
 st.plotly_chart(docFig)
 
 #---Topic Map---------------------------------
-ldaComponents = topicExtractionModel.components_
-reducedTopicWordMatrix = TSNE(n_components=2, perplexity=numTopics-1).fit_transform(topicExtractionModel.components_)
+if(selectedAlgo != 'BERTopic'):
+    ldaComponents = topicExtractionModel.components_
+    reducedTopicWordMatrix = TSNE(n_components=2, perplexity=numTopics-1).fit_transform(topicExtractionModel.components_)
 
-documentMapHeight = 400
-fig = px.scatter(
-    x=reducedTopicWordMatrix[:, 0], 
-    y=reducedTopicWordMatrix[:, 1],
-    title="Topic Map",)
+    documentMapHeight = 400
+    fig = px.scatter(
+        x=reducedTopicWordMatrix[:, 0], 
+        y=reducedTopicWordMatrix[:, 1],
+        title="Topic Map",)
 
-totalCount = topic_document_count_df['Document Count'].sum()
-topic_document_count_df['Percent'] = topic_document_count_df['Document Count'] / totalCount
+    totalCount = topic_document_count_df['Document Count'].sum()
+    topic_document_count_df['Percent'] = topic_document_count_df['Document Count'] / totalCount
 
-# Map colors based on the values of df['Topic']
-fig.update_traces(
-    marker=dict(
-        color=topicColors,
-        colorscale='Viridis',
-        size= 400 * topic_document_count_df['Percent'],
+    # Map colors based on the values of df['Topic']
+    fig.update_traces(
+        marker=dict(
+            color=topicColors,
+            colorscale='Viridis',
+            size= 400 * topic_document_count_df['Percent'],
+        )
     )
-)
 
-# Remove axis labels
-fig.update_layout(
-    xaxis_title='', 
-    yaxis_title='', 
-    height = documentMapHeight,
-    margin=dict(l=0, r=0, t=50, b=0),
-    xaxis=dict(showticklabels=False),
-    yaxis=dict(showticklabels=False)
-)
-# Remove y-axis numbers
-fig.update_xaxes(showgrid=False)
-fig.update_yaxes(
-    tickmode='linear', 
-    tick0=0, 
-    showgrid=False, 
-    title_standoff=0,  # Distance between axis title and tick labels
-)
+    # Remove axis labels
+    fig.update_layout(
+        xaxis_title='', 
+        yaxis_title='', 
+        height = documentMapHeight,
+        margin=dict(l=0, r=0, t=50, b=0),
+        xaxis=dict(showticklabels=False),
+        yaxis=dict(showticklabels=False)
+    )
+    # Remove y-axis numbers
+    fig.update_xaxes(showgrid=False)
+    fig.update_yaxes(
+        tickmode='linear', 
+        tick0=0, 
+        showgrid=False, 
+        title_standoff=0,  # Distance between axis title and tick labels
+    )
 
-plot = st.plotly_chart(fig, use_container_width=True)
+    plot = st.plotly_chart(fig, use_container_width=True)
 
 #-------------------------------------------------------------
-# Document Map
-# reducedTopicDistributions = PCA(n_components=2).fit_transform(documentTopicDistributions)
-reducedTopicDistributions = TSNE(n_components=2).fit_transform(documentTopicDistributions)
+if(selectedAlgo != 'BERTopic'):
+    # Document Map
+    # reducedTopicDistributions = PCA(n_components=2).fit_transform(documentTopicDistributions)
+    reducedTopicDistributions = TSNE(n_components=2).fit_transform(documentTopicDistributions)
 
-documentMapHeight = 400
-fig = px.scatter(x=reducedTopicDistributions[:, 0], 
-                 y=reducedTopicDistributions[:, 1], 
-                 title="Document Map",)
+    documentMapHeight = 400
+    fig = px.scatter(x=reducedTopicDistributions[:, 0], 
+                    y=reducedTopicDistributions[:, 1], 
+                    title="Document Map",)
 
-# Map colors based on the values of df['Topic']
+    # Map colors based on the values of df['Topic']
 
-fig.update_traces(
-    marker=dict(
-        color=df['Topic'].map(dict(zip(range(numTopics), topicColors))),
-        colorscale='Viridis'
+    fig.update_traces(
+        marker=dict(
+            color=df['Topic'].map(dict(zip(range(numTopics), topicColors))),
+            colorscale='Viridis'
+        )
     )
-)
 
-# Remove axis labels
-fig.update_layout(
-    xaxis_title='', 
-    yaxis_title='', 
-    height = documentMapHeight,
-    margin=dict(l=0, r=0, t=50, b=0),
-    xaxis=dict(showticklabels=False),
-    yaxis=dict(showticklabels=False)
-)
-# Remove y-axis numbers
-fig.update_xaxes(showgrid=True)
-fig.update_yaxes(
-    tickmode='linear', 
-    tick0=0, 
-    showgrid=False, 
-    title_standoff=0,  # Distance between axis title and tick labels
-)
+    # Remove axis labels
+    fig.update_layout(
+        xaxis_title='', 
+        yaxis_title='', 
+        height = documentMapHeight,
+        margin=dict(l=0, r=0, t=50, b=0),
+        xaxis=dict(showticklabels=False),
+        yaxis=dict(showticklabels=False)
+    )
+    # Remove y-axis numbers
+    fig.update_xaxes(showgrid=True)
+    fig.update_yaxes(
+        tickmode='linear', 
+        tick0=0, 
+        showgrid=False, 
+        title_standoff=0,  # Distance between axis title and tick labels
+    )
 
-st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True)
 
 #----Raw Data----------------------------------------
 displayDF = GetDataFrame(dataFileName, textColumnName, dateColumnName)

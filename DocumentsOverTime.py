@@ -19,7 +19,7 @@ def CreateDocTimeFig(df, topicCount, topicColors, normalize = False):
     x_values = []  # List to store all x values
     y_values = []  # List to store all y values
     
-    monthTotals = df.groupby('TimeInterval').size().reset_index(name='Count')['Count']
+    monthTotals = df[df['Topic'] >= 0].groupby('TimeInterval').size().reset_index(name='Count')['Count']
 
     for i in range(topicCount):
         # Filter data for topic i
@@ -47,14 +47,14 @@ def CreateDocTimeFig(df, topicCount, topicColors, normalize = False):
         x_values.extend(grouped_df['TimeInterval'])
         y_values.extend(grouped_df['Count'])
 
-    # Calculate x and y range
-    x_range = [min(x_values), max(x_values)]
-    y_range = [min(y_values), max(y_values)]
+    # # Calculate x and y range
+    # x_range = [min(x_values), max(x_values)]
+    # y_range = [min(y_values), max(y_values)]
 
-    topicBtnLabel = ''
+    # topicBtnLabel = ''
     
-    if(topicCount > 9):
-        topicBtnLabel = ''
+    # if(topicCount > 9):
+    #     topicBtnLabel = ''
 
     # # Create buttons to show each trace individually or all traces
     # buttons = [{'label': f'{topicBtnLabel}{i+1}', 'method': 'update', 'args': [{'visible': [True if j == i else False for j in range(topicCount)]}]} for i in range(topicCount)]
