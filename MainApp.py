@@ -147,7 +147,7 @@ box_style = """
     </div>
 """
 
-documentCount = df.shape[0]
+documentCount = format(df.shape[0], ',')
 
 all_stop_words = list(CountVectorizer(stop_words='english').get_stop_words()) if useStopWords else None
 
@@ -157,8 +157,8 @@ if(useAdditionalStopWords):
 vectorizer = CountVectorizer(stop_words=all_stop_words, max_df=maxDocFreq, min_df=minDocFreq, ngram_range=(minNgram, maxNgram))
 
 docTermMatrix = vectorizer.fit_transform(df[textColumnName])
-total_words = docTermMatrix.sum()
-unique_words = len(vectorizer.get_feature_names_out())
+total_words = format(docTermMatrix.sum(), ',')
+unique_words = format(len(vectorizer.get_feature_names_out()), ',')
 
 # Display boxes in each column
 with col1:
@@ -290,7 +290,6 @@ elif(selectedAlgo == 'BERTopic'):
         n_neighbors=15, 
         n_components=5, 
         metric='cosine',
-        random_state=42
     )
 
     # Create a BERTopic model and fit it to your documents
@@ -298,7 +297,7 @@ elif(selectedAlgo == 'BERTopic'):
         vectorizer_model=vectorizer, 
         hdbscan_model=hdbscan, 
         nr_topics= (numTopics + 1) if reduceTopics else None, # +1 for outlier
-        top_n_words=wordsPerTopic
+        top_n_words=wordsPerTopic,
     )
     
     docTopics, probs = bertModel.fit_transform(documents)
@@ -321,6 +320,12 @@ if(selectedAlgo == 'LDA') or (selectedAlgo == 'NMF'):
     topicDFs = GetTopics(topicExtractionModel, vectorizer, wordsPerTopic)
     
 df['Topic'] = docTopics
+
+#----Additional BERT Info-----------------------------------------
+if(selectedAlgo == 'BERTopic'):
+    st.write('\n')
+    unassingnedCount = len(df[df['Topic'] == -1])
+    st.subheader(f'Unassigned Documents: {unassingnedCount}')
 
 #--Topic Word Charts-----------------------------
 
