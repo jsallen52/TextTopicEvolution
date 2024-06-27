@@ -1,3 +1,4 @@
+import math
 import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer
@@ -75,12 +76,33 @@ def GetFlaggedRecentWordsZscore(df, textColumnName, dateColumnName, numWords):
     
     return topTenArray
 
+def GetTopRecentWordsCTFIDF(df, textColumnName, dateColumnName, numWords):
+    df['Month'] = df[dateColumnName].dt.to_period('M')
+
+    interval_df = df.groupby('Month')[textColumnName].apply(lambda x: ' '.join(x)).reset_index()
+    
+    vectorizer = CountVectorizer(stop_words='english')
+    docTermMatrix = vectorizer.fit_transform(interval_df[textColumnName])
+    
+    totalFrequencies = docTermMatrix.sum(axis=0)
+    avgTotalWords = docTermMatrix.sum() / docTermMatrix.shape[0]
+    adjustedIDF = np.log(1 + avgTotalWords/totalFrequencies)
+    docTermMatrix = docTermMatrix.multiply(adjustedIDF)
+
+    lastRow = pd.DataFrame(docTermMatrix.toarray(), columns=vectorizer.get_feature_names_out()).tail(1).reset_index(drop=True).T
+
+    lastRowSorted = lastRow.sort_values(0, ascending=False)
+
+    topTenArray = lastRowSorted.index[:numWords].values
+    
+    return topTenArray
+
 def CreateWordsOverTimeChart(df, textColumnName, DateColumnName, docTermMatrix, featureNames):
     vectorizer = CountVectorizer(stop_words='english',  max_df=0.95)
     docTermMatrix = vectorizer.fit_transform(df[textColumnName])
     featureNames = vectorizer.get_feature_names_out()
     
-    word_list = GetTopRecentWordsTFIDF(df, textColumnName, DateColumnName, 14)
+    word_list = GetTopRecentWordsCTFIDF(df, textColumnName, DateColumnName, 14)
     
     word_counts = pd.DataFrame(docTermMatrix.toarray(), columns=featureNames)
     word_counts['TimeInterval'] = df['TimeInterval'].values

@@ -353,7 +353,6 @@ topicColors = [
     '#ffd8b1',
     '#fffac8',
     '#dcbeff',
-    '#fffafa',        
 ]
 
 
