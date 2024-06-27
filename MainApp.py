@@ -125,7 +125,7 @@ if(selectedAlgo == 'BERTopic'):
 #-------------------------------------------------------------
 df = df[(df[dateColumnName] >= pd.to_datetime(start_date)) & (df[dateColumnName] <= pd.to_datetime(end_date) + pd.Timedelta(days=1))]
 
-if(useNounsOnly):
+if(useNounsOnly and selectedAlgo != 'BERTopic'):
     df = FilterForNouns(df, textColumnName) 
 
 df = AssignTimeInterval(df, dateColumnName, selectedTimeInterval)
@@ -308,6 +308,8 @@ elif(selectedAlgo == 'BERTopic'):
     
     dfTopicDistributions = pd.DataFrame({'Probs': probs})
     dfTopicDistributions['Topic'] = docTopics
+    
+    representativeDocs = bertModel.get_representative_docs()
 
 if(selectedAlgo == 'LDA') or (selectedAlgo == 'NMF'):
     documentTopicDistributions = topicExtractionModel.fit_transform(docTermMatrix)
@@ -388,6 +390,18 @@ for i in range(numTopics):
         # Remove y-axis numbers
         fig.update_xaxes(showticklabels=False)
         st.plotly_chart(fig, use_container_width=True)
+        
+#----Topic Representative Docs-----------------------------
+numRepDocs = 3
+if(selectedAlgo == 'BERTopic'):
+    with st.expander("**Representative Documents**"):
+        # st.header('')
+        for topic_id, docs in representativeDocs.items():
+            if topic_id == -1:
+                continue
+            st.subheader(f"Topic {topic_id + 1}:")
+            for doc in docs[:numRepDocs]:
+                st.write(doc)
         
 #----Topic Spread box Plot----------------------------------------
 probColumn = None
