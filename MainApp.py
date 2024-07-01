@@ -273,12 +273,6 @@ if(selectedAlgo == 'LDA') or (selectedAlgo == 'NMF'):
     
 df['Topic'] = docTopics
 
-#----Additional BERT Info-----------------------------------------
-if(selectedAlgo == 'BERTopic'):
-    st.write('\n')
-    unassignedCount = len(df[df['Topic'] == -1])
-    st.write(f'**Unassigned Documents: {unassignedCount}**')
-
 #--Topic Word Charts-----------------------------
 
 topicColors = [
@@ -381,6 +375,13 @@ fig.update_layout(
 )
 
 st.plotly_chart(fig, use_container_width=True)
+
+#----Additional BERT Info-----------------------------------------
+if(selectedAlgo == 'BERTopic'):
+    st.write('\n')
+    unassignedCount = len(df[df['Topic'] == -1])
+    st.write(f'**Unassigned Documents: {unassignedCount}**')
+
 
 #--Documents Over Time Chart---------------------------------
 docFig = CreateDocTimeFig(df, numTopics, topicColors)
