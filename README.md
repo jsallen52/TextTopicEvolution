@@ -15,8 +15,8 @@ This application visualizes the evolution of topics in textual data using NMF an
 5. Open the app in your browser at `http://localhost:8501`.
 
 ## Additional Chart Info
- v Flagged Words for Most Recent Time Interval:
+### Flagged Words for Most Recent Time Interval:
 Seperates the documents into the time interval selected in the side bar options then used a modified version of TF-IDF called cTF-IDF ('https://maartengr.github.io/BERTopic/getting_started/ctfidf/ctfidf.html') to analyze the the words in each time interval. The words with the highest cTF-IDF scores are considered "Flagged". The chart dispalys the count of these words for each previous and the current time interval.
-ˆ
+
 ### Topic Word Charts
 Each chart displays the top n (number can be slected in sidebar options) most descriptive words for each topic. This is found using the **Topic-Term Matrix** which describes the probability for each word being a part of each topic. For LDA and NMF algorithms this matrix is calculated in parallel with the **Document-Topic Matrix** which respresents the probability for each document belonging to each Topic. For BERTopic the **Topic-Term Matrix** is caclulated usign the cTF-IDF algorithm post clustering the documents into topics.
