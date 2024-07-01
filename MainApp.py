@@ -103,7 +103,7 @@ with st.sidebar.form(key='filter_form'):
     #-------Side Bar Topic Extraction
     st.subheader('Topic Extraction')
     algoOptions = ['LDA', 'NMF', 'BERTopic']
-    selectedAlgo = st.selectbox('Algorithm', algoOptions, index=1)
+    selectedAlgo = st.selectbox('Algorithm', algoOptions, index=2)
     
     numTopicsDisabled = (selectedAlgo == 'BERTopic')
     numTopics = st.slider('Topic Count', 3, 40, 10, disabled = numTopicsDisabled)
@@ -206,56 +206,6 @@ fig.update_yaxes(
     ticklabelposition="inside",  # Position tick labels inside to save space
 )
 
-#-----------Animatated Chart-----------------
-
-
-# terms = vectorizer.get_feature_names_out()
-# docTermArray = docTermMatrix.toarray()
-# # timeIntervals = df['TimeInterval'].unique()
-
-# dfTermMatrix = pd.DataFrame(docTermArray, columns=terms)
-# dfTermMatrix['TimeInterval'] = df['TimeInterval'].values
-
-# dfTermMatrix = dfTermMatrix.reset_index(drop=True)
-
-# # Melt the DataFrame to get the desired format
-# dfMelted = dfTermMatrix.melt(id_vars='TimeInterval', var_name='Term', value_name='Count')
-
-# dfGrouped = dfMelted.groupby(['TimeInterval', 'Term'], as_index=False).sum()
-# timeIntervals = dfGrouped['TimeInterval'].unique()
-
-# # Get top words from first time interval
-# firstInterval = dfGrouped[dfGrouped['TimeInterval'] == timeIntervals[0]]
-# sortedDf = firstInterval.sort_values(by='Count', ascending=False)
-# topWords = sortedDf.head(topWordCount)['Term'].values
-
-# dfGroupedTopWords = dfGrouped[dfGrouped['Term'].isin(topWords)]
-
-# fig = px.bar(
-#     dfGroupedTopWords, 
-#     x='Count', 
-#     y='Term', 
-#     animation_frame='TimeInterval',    
-#     orientation='h',
-#     category_orders={'Term': sorted(dfGroupedTopWords['Term'].unique())},
-#     range_y=[min(dfGroupedTopWords['Term'].unique()), max(dfGroupedTopWords['Term'].unique())],
-#     height= 400 + (topWordCount * 10),
-#     hover_name='Term',
-#     hover_data={'Count': ':d'},
-#     title='Frequency of Top Words per Interval',
-# )
-
-# fig.update_yaxes(
-#     tickvals=dfGroupedTopWords['Term'].unique(),
-#     tickmode='array',
-#     tick0=min(dfGroupedTopWords['Term'].unique()),
-#     dtick=1,
-#     showgrid=False,
-#     title_standoff=0,
-#     showticklabels=True)
-
-# fig.update_xaxes(showgrid=True, range=[0, dfGroupedTopWords['Count'].max()])
-
 st.plotly_chart(fig, use_container_width=True)
 
 #------Flagged Words Chart--------------------------
@@ -326,8 +276,8 @@ df['Topic'] = docTopics
 #----Additional BERT Info-----------------------------------------
 if(selectedAlgo == 'BERTopic'):
     st.write('\n')
-    unassingnedCount = len(df[df['Topic'] == -1])
-    st.subheader(f'Unassigned Documents: {unassingnedCount}')
+    unassignedCount = len(df[df['Topic'] == -1])
+    st.write(f'**Unassigned Documents: {unassignedCount}**')
 
 #--Topic Word Charts-----------------------------
 
@@ -407,7 +357,7 @@ probColumn = None
 if(selectedAlgo == 'BERTopic'):
     probColumn = 'Probs'
 
-st.plotly_chart(GetTopicDocumentStats(dfTopicDistributions, numTopics, topicColors, probColumn))
+st.plotly_chart(GetTopicDocumentStats(dfTopicDistributions, numTopics, topicColors, probColumn), use_container_width=True)
 
 #--Documents Per Topic Chart---------------------------------
 dfAssignedDocs = df[df['Topic'] >= 0]
@@ -427,8 +377,6 @@ fig.update_layout(
     showlegend=False,
     title={
         'text': f'Estimated Documents Per Topic',
-        'x': 0.5,
-        'xanchor': 'center'
     },
 )
 

@@ -35,6 +35,10 @@ def GetTopicDocumentStats(dfTopicDistributions, numTopics, topicColors, topicPro
         
     # Make Box Plot
     fig = go.Figure()
+    fig.update_layout(
+        title='Distribution of Document Probability Per Topic',
+    )
+
     for i, data in enumerate(topicData):
         fig.add_trace(go.Box(y=data, name=f'Topic {i+1}', marker_color=topicColors[i]))
 

@@ -8,7 +8,6 @@ def CreateDocTimeFig(df, topicCount, topicColors, normalize = False):
     
     fig = go.Figure()
     
-    
     fig.update_layout(
         title = figTitle
     )
@@ -46,44 +45,5 @@ def CreateDocTimeFig(df, topicCount, topicColors, normalize = False):
         # Append x and y values to the lists
         x_values.extend(grouped_df['TimeInterval'])
         y_values.extend(grouped_df['Count'])
-
-    # # Calculate x and y range
-    # x_range = [min(x_values), max(x_values)]
-    # y_range = [min(y_values), max(y_values)]
-
-    # topicBtnLabel = ''
-    
-    # if(topicCount > 9):
-    #     topicBtnLabel = ''
-
-    # # Create buttons to show each trace individually or all traces
-    # buttons = [{'label': f'{topicBtnLabel}{i+1}', 'method': 'update', 'args': [{'visible': [True if j == i else False for j in range(topicCount)]}]} for i in range(topicCount)]
-    # buttons.append({'label': 'Show All', 'method': 'update', 'args': [{'visible': [True] * topicCount}]})
-
-
-    # # Update layout with buttons and set x and y axis ranges
-    # fig.update_layout(
-    #     xaxis=dict(
-    #         tickangle=45,
-    #         showgrid=True,
-    #         range=x_range  # Set x axis range
-    #     ),
-    #     yaxis=dict(
-    #         title='Document Count',
-    #         showgrid=True,
-    #         range=y_range  # Set y axis range
-    #     ),
-    #     title='Document Count By Topic Over Time',
-    #     updatemenus=[{
-    #         'type': 'buttons',
-    #         'direction': 'right',
-    #         'showactive': True,
-    #         'buttons': buttons,
-    #         'x': 0.5,  # Set the x position of the buttons to the center
-    #         'y': 1.1,  # Set the y position of the buttons to be above the chart
-    #         'xanchor': 'center',  # Anchor the x position to the center
-    #         'yanchor': 'top',  # Anchor the y position to the top
-    #     }],
-    # )
 
     return fig
