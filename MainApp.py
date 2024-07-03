@@ -68,7 +68,16 @@ def loadBertModel(_documents, numTopics, reduceTopics, wordsPerTopic, minCluster
     
     return bertModel, topics, probs
 
-# def loadLDA_NMF(selectedAlgo, numTopics, minDocFreq, maxDocFreq, minNgram, maxNgram, textColumnName, dateColumnName, textColumn):
+@st.cache_resource
+def loadLDA_NMF(selectedAlgo, numTopics, _docTermMatrix):
+    if(selectedAlgo == 'LDA'): 
+        topicExtractionModel = LatentDirichletAllocation(n_components=numTopics, max_iter=50, learning_method='online')
+        
+    elif(selectedAlgo == 'NMF'):
+        #NMF used TFIDF for vectorization
+        topicExtractionModel = NMF(n_components=numTopics)
+        
+    return topicExtractionModel, topicExtractionModel.fit_transform(_docTermMatrix)
 
 #-------Filters Side Bar-----------------------------------
 
@@ -248,16 +257,7 @@ if flagWordsChart is not None:
     st.plotly_chart(flagWordsChart, use_container_width=True)
 
 #--Topic Extraction---------------------------------------------
-if(selectedAlgo == 'LDA'): 
-    topicExtractionModel = LatentDirichletAllocation(n_components=numTopics, max_iter=50, learning_method='online')
-    
-elif(selectedAlgo == 'NMF'):
-    #NMF used TFIDF for vectorization
-    vectorizer = TfidfVectorizer(stop_words=all_stop_words, max_df=maxDocFreq, min_df=minDocFreq, ngram_range=(minNgram, maxNgram))
-    docTermMatrix = vectorizer.fit_transform(df[textColumnName])
-    topicExtractionModel = NMF(n_components=numTopics, random_state=42)
-    
-elif(selectedAlgo == 'BERTopic'):
+if(selectedAlgo == 'BERTopic'):
     documents = df[textColumnName].values
     
     bertModel, docTopics, probs = loadBertModel(documents, numTopics, reduceTopics, wordsPerTopic, minClusterSize, vectorizer, textColumnName, dateColumnName)
@@ -271,8 +271,12 @@ elif(selectedAlgo == 'BERTopic'):
     
     representativeDocs = bertModel.get_representative_docs()
 
-if(selectedAlgo == 'LDA') or (selectedAlgo == 'NMF'):
-    documentTopicDistributions = topicExtractionModel.fit_transform(docTermMatrix)
+elif(selectedAlgo == 'LDA') or (selectedAlgo == 'NMF'):
+    if(selectedAlgo == 'NMF'):
+        vectorizer = TfidfVectorizer(stop_words=all_stop_words, max_df=maxDocFreq, min_df=minDocFreq, ngram_range=(minNgram, maxNgram))
+        docTermMatrix = vectorizer.fit_transform(df[textColumnName])
+        
+    topicExtractionModel, documentTopicDistributions = loadLDA_NMF(selectedAlgo, numTopics, docTermMatrix)
 
     topic_columns = [f'Topic {i}' for i in range(numTopics)]
     dfTopicDistributions = pd.DataFrame(documentTopicDistributions, columns=topic_columns)
