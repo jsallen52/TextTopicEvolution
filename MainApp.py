@@ -43,7 +43,7 @@ all_files = [f for f in os.listdir('.') if f.endswith(('.json', '.csv'))]
 #------------------------------------------------------
 
 @st.cache_resource
-def loadBertModel(_documents, numTopics, reduceTopics, wordsPerTopic, minClusterSize, _vectorizer, textColumnName, dateColumnName):
+def loadBertModel(_documents, numTopics, reduceTopics, wordsPerTopic, minClusterSize, _vectorizer, textColumnName, dateColumnName, startDate, endDate, minDF, maxDF, minNGram,maxNGram):
     hdbscan = HDBSCAN(
         min_cluster_size=minClusterSize, 
         metric='euclidean', 
@@ -69,7 +69,7 @@ def loadBertModel(_documents, numTopics, reduceTopics, wordsPerTopic, minCluster
     return bertModel, topics, probs
 
 @st.cache_resource
-def loadLDA_NMF(selectedAlgo, numTopics, _docTermMatrix):
+def loadLDA_NMF(selectedAlgo, numTopics, _docTermMatrix, textColumnName, dateColumnName, startDate, endDate, minDF, maxDF, minNGram,maxNGram):
     if(selectedAlgo == 'LDA'): 
         topicExtractionModel = LatentDirichletAllocation(n_components=numTopics, max_iter=50, learning_method='online')
         
@@ -260,7 +260,7 @@ if flagWordsChart is not None:
 if(selectedAlgo == 'BERTopic'):
     documents = df[textColumnName].values
     
-    bertModel, docTopics, probs = loadBertModel(documents, numTopics, reduceTopics, wordsPerTopic, minClusterSize, vectorizer, textColumnName, dateColumnName)
+    bertModel, docTopics, probs = loadBertModel(documents, numTopics, reduceTopics, wordsPerTopic, minClusterSize, vectorizer, textColumnName, dateColumnName, start_date, end_date, minDocFreq, maxDocFreq, minNgram,maxNgram)
     
     numTopics = len(bertModel.get_topic_info()) - 1
     
@@ -276,7 +276,7 @@ elif(selectedAlgo == 'LDA') or (selectedAlgo == 'NMF'):
         vectorizer = TfidfVectorizer(stop_words=all_stop_words, max_df=maxDocFreq, min_df=minDocFreq, ngram_range=(minNgram, maxNgram))
         docTermMatrix = vectorizer.fit_transform(df[textColumnName])
         
-    topicExtractionModel, documentTopicDistributions = loadLDA_NMF(selectedAlgo, numTopics, docTermMatrix)
+    topicExtractionModel, documentTopicDistributions = loadLDA_NMF(selectedAlgo, numTopics, docTermMatrix, textColumnName, dateColumnName,start_date, end_date, minDocFreq, maxDocFreq, minNgram,maxNgram)
 
     topic_columns = [f'Topic {i}' for i in range(numTopics)]
     dfTopicDistributions = pd.DataFrame(documentTopicDistributions, columns=topic_columns)
