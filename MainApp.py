@@ -37,6 +37,39 @@ st.title('Text Topic Analysis')
 # Find all .json or .csv files in the root folder
 all_files = [f for f in os.listdir('.') if f.endswith(('.json', '.csv'))]
 
+#------Cache Functions---------------------------------
+# Streamlit will automatically cache the results of the 
+# functions so any future calls with the same parameters will not be re-run
+#------------------------------------------------------
+
+@st.cache_resource
+def loadBertModel(_documents, numTopics, reduceTopics, wordsPerTopic, minClusterSize, _vectorizer, textColumnName, dateColumnName):
+    hdbscan = HDBSCAN(
+        min_cluster_size=minClusterSize, 
+        metric='euclidean', 
+        cluster_selection_method='eom', 
+        prediction_data=True
+    )
+    
+    umap = UMAP(
+        n_neighbors=15, 
+        n_components=5, 
+        metric='cosine',
+    )
+
+    # Create a BERTopic model and fit it to your documents
+    bertModel = BERTopic(
+        vectorizer_model=_vectorizer, 
+        hdbscan_model=hdbscan, 
+        nr_topics= (numTopics + 1) if reduceTopics else None, # +1 for outlier
+        top_n_words=wordsPerTopic,
+    )
+    topics, probs = bertModel.fit_transform(_documents)
+    
+    return bertModel, topics, probs
+
+# def loadLDA_NMF(selectedAlgo, numTopics, minDocFreq, maxDocFreq, minNgram, maxNgram, textColumnName, dateColumnName, textColumn):
+
 #-------Filters Side Bar-----------------------------------
 
 dataFileName = st.sidebar.selectbox('Data Source', all_files, index = all_files.index(dataFileName))
@@ -215,8 +248,6 @@ if flagWordsChart is not None:
     st.plotly_chart(flagWordsChart, use_container_width=True)
 
 #--Topic Extraction---------------------------------------------
-useNMF = (selectedAlgo == 'NMF')
-
 if(selectedAlgo == 'LDA'): 
     topicExtractionModel = LatentDirichletAllocation(n_components=numTopics, max_iter=50, learning_method='online')
     
@@ -228,29 +259,8 @@ elif(selectedAlgo == 'NMF'):
     
 elif(selectedAlgo == 'BERTopic'):
     documents = df[textColumnName].values
-
-    hdbscan = HDBSCAN(
-        min_cluster_size=minClusterSize, 
-        metric='euclidean', 
-        cluster_selection_method='eom', 
-        prediction_data=False
-    )
     
-    umap = UMAP(
-        n_neighbors=15, 
-        n_components=5, 
-        metric='cosine',
-    )
-
-    # Create a BERTopic model and fit it to your documents
-    bertModel = BERTopic(
-        vectorizer_model=vectorizer, 
-        hdbscan_model=hdbscan, 
-        nr_topics= (numTopics + 1) if reduceTopics else None, # +1 for outlier
-        top_n_words=wordsPerTopic,
-    )
-    
-    docTopics, probs = bertModel.fit_transform(documents)
+    bertModel, docTopics, probs = loadBertModel(documents, numTopics, reduceTopics, wordsPerTopic, minClusterSize, vectorizer, textColumnName, dateColumnName)
     
     numTopics = len(bertModel.get_topic_info()) - 1
     

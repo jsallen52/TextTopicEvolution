@@ -36,7 +36,7 @@ def GetTopicDocumentStats(dfTopicDistributions, numTopics, topicColors, topicPro
     # Make Box Plot
     fig = go.Figure()
     fig.update_layout(
-        title='Distribution of Document Probability Per Topic',
+        title='Distribution of Document Correlations Per Topic',
     )
 
     for i, data in enumerate(topicData):
