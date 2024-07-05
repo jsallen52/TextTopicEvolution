@@ -257,6 +257,9 @@ if flagWordsChart is not None:
     st.plotly_chart(flagWordsChart, use_container_width=True)
 
 #--Topic Extraction---------------------------------------------
+st.markdown("---")
+st.subheader("Topic Extraction")
+
 if(selectedAlgo == 'BERTopic'):
     documents = df[textColumnName].values
     
@@ -359,14 +362,10 @@ if(selectedAlgo == 'BERTopic'):
             st.subheader(f"Topic {topic_id + 1}:")
             for doc in docs[:numRepDocs]:
                 st.write(doc)
-        
-#----Topic Spread box Plot----------------------------------------
-probColumn = None
-if(selectedAlgo == 'BERTopic'):
-    probColumn = 'Probs'
 
-st.plotly_chart(GetTopicDocumentStats(dfTopicDistributions, numTopics, topicColors, probColumn), use_container_width=True)
 
+st.markdown("---")
+st.subheader("Topic Analysis")
 #--Documents Per Topic Chart---------------------------------
 dfAssignedDocs = df[df['Topic'] >= 0]
 topic_document_count_df = dfAssignedDocs.groupby('Topic').size().reset_index(name='Document Count')
@@ -395,8 +394,16 @@ if(selectedAlgo == 'BERTopic'):
     st.write('\n')
     unassignedCount = len(df[df['Topic'] == -1])
     st.write(f'**Unassigned Documents: {unassignedCount}**')
+        
+#----Topic Spread box Plot----------------------------------------
+probColumn = None
+if(selectedAlgo == 'BERTopic'):
+    probColumn = 'Probs'
 
+st.plotly_chart(GetTopicDocumentStats(dfTopicDistributions, numTopics, topicColors, probColumn), use_container_width=True)
 
+st.markdown("---")
+st.subheader("Time Series Analysis")
 #--Documents Over Time Chart---------------------------------
 docFig = CreateDocTimeFig(df, numTopics, topicColors)
 st.plotly_chart(docFig)
@@ -405,6 +412,9 @@ st.plotly_chart(docFig)
 docFig = CreateDocTimeFig(df, numTopics, topicColors, normalize=True)
 st.plotly_chart(docFig)
 
+if(selectedAlgo == 'LDA' or selectedAlgo == 'NMF'):
+    st.markdown("---")
+    st.subheader("Topic and Document Maps")
 #---Topic Map---------------------------------
 if(selectedAlgo != 'BERTopic'):
     ldaComponents = topicExtractionModel.components_
