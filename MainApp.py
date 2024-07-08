@@ -467,7 +467,31 @@ if(selectedAlgo != 'BERTopic'):
     plot = st.plotly_chart(fig, use_container_width=True)
 
 #-------------------------------------------------------------
-if(selectedAlgo != 'BERTopic'):
+st.markdown("---")
+st.subheader("Other Charts")
+
+if(selectedAlgo == 'BERTopic'):
+    docFig = bertModel.visualize_documents(documents, hide_annotations=True)
+    docFig.to_plotly_json()
+    docFig.update_layout(
+        title = "Document Map",
+        ) # margin=dict(t=0, b=0, l=0, r=0)
+    st.plotly_chart(docFig, use_container_width=True)
+    
+    topicHierarchyFig = bertModel.visualize_hierarchy()
+    topicHierarchyFig.update_layout(
+        title = "Hierarchical Clustering",
+        ) # margin=dict(t=0, b=0, l=0, r=0)
+    st.plotly_chart(topicHierarchyFig, use_container_width=True)
+    
+    topicFig = bertModel.visualize_topics()
+    topicFig.update_layout(
+        title = "Topic Map",
+        ) # margin=dict(t=0, b=0, l=0, r=0)
+    st.plotly_chart(topicFig, use_container_width=True)
+    
+
+if(selectedAlgo == 'NMF' or selectedAlgo == 'LDA'):
     # Document Map
     # reducedTopicDistributions = PCA(n_components=2).fit_transform(documentTopicDistributions)
     reducedTopicDistributions = TSNE(n_components=2).fit_transform(documentTopicDistributions)
