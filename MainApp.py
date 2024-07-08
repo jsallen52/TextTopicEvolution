@@ -115,55 +115,52 @@ with st.sidebar.form(key='filter_form'):
     options = ['Weekly', 'Monthly', 'Yearly']
     selectedTimeInterval = st.selectbox('Time Interval', options, index = 1)
     
-    minDocFreq = st.number_input('Minimum Document Frequency', 0, 100, 2)
-    maxDocFreq = st.number_input('Maximum Document Frequency', 0.0, 1.0, .95)
-    
-    minNgram = st.number_input('Minimum NGram', 1, 3, 1)
-    maxNgram = st.number_input('Maximum NGram', 1, 4, 1)
-    
     topWordCount = st.slider('Top Words', 5, 50, 20)
     
-    #-------Side Bar Parts of Speech
-    st.subheader('Parts of Speech')
-    # Filter for nouns only
-    useNounsOnly = st.checkbox("Nouns Only", value=True, key="nouns_only_checkbox")
+    with st.expander("Advanced Options"):
     
-    #-------Side Bar Stop Words
-    st.subheader('Stop Words')
-    useStopWords = st.checkbox("Use Standard Stop Words", value=True, key="stop_words_checkbox")
-
-    vectorizer = CountVectorizer(stop_words= 'english' if useStopWords else None, ngram_range=(minNgram, maxNgram))
-    X = vectorizer.fit(df[textColumnName])
-
-    useAdditionalStopWords = st.checkbox("Use Additional Stop Words", value=True, key="my_checkbox2", disabled=not useStopWords)
-
-    additional_stop_words = st.multiselect('Select Additional Stop Words', list(vectorizer.get_feature_names_out()), default=additional_stop_words, disabled= (not useAdditionalStopWords) or (not useStopWords))
-
-    if(not useStopWords):
-        useAdditionalStopWords = False
+        minDocFreq = st.number_input('Minimum Document Frequency', 0, 100, 2)
+        maxDocFreq = st.number_input('Maximum Document Frequency', 0.0, 1.0, .95)
         
-    #-------Side Bar Topic Extraction
-    st.subheader('Topic Extraction')
-    algoOptions = ['LDA', 'NMF', 'BERTopic']
-    selectedAlgo = st.selectbox('Algorithm', algoOptions, index=2)
-    
-    numTopicsDisabled = (selectedAlgo == 'BERTopic')
-    numTopics = st.slider('Topic Count', 3, 40, 10, disabled = numTopicsDisabled)
-    wordsPerTopic = st.slider('Words Per Topic', 8, 15, 10)
-    
-    #-------Submit button
-    st.form_submit_button(label='Apply Filters')
+        minNgram = st.number_input('Minimum NGram', 1, 3, 1)
+        maxNgram = st.number_input('Maximum NGram', 1, 4, 1)
+        
+        #-------Side Bar Parts of Speech
+        st.subheader('Parts of Speech')
+        # Filter for nouns only
+        useNounsOnly = st.checkbox("Nouns Only", value=True, key="nouns_only_checkbox")
+        
+        #-------Side Bar Stop Words
+        st.subheader('Stop Words')
+        useStopWords = st.checkbox("Use Standard Stop Words", value=True, key="stop_words_checkbox")
 
-if(selectedAlgo == 'BERTopic'):
-    with st.sidebar.form(key='BERTopic_form'):
+        vectorizer = CountVectorizer(stop_words= 'english' if useStopWords else None, ngram_range=(minNgram, maxNgram))
+        X = vectorizer.fit(df[textColumnName])
+
+        useAdditionalStopWords = st.checkbox("Use Additional Stop Words", value=True, key="my_checkbox2", disabled=not useStopWords)
+
+        additional_stop_words = st.multiselect('Select Additional Stop Words', list(vectorizer.get_feature_names_out()), default=additional_stop_words, disabled= (not useAdditionalStopWords) or (not useStopWords))
+
+        if(not useStopWords):
+            useAdditionalStopWords = False
+            
+        #-------Side Bar Topic Extraction
+        st.subheader('Topic Extraction')
+        algoOptions = ['LDA', 'NMF', 'BERTopic']
+        selectedAlgo = st.selectbox('Algorithm', algoOptions, index=2)
+        
+        numTopicsDisabled = (selectedAlgo == 'BERTopic')
+        numTopics = st.slider('Topic Count', 3, 40, 10, disabled = numTopicsDisabled)
+        wordsPerTopic = st.slider('Words Per Topic', 8, 15, 10)
+
         st.subheader('BERTopic Options')
         reduceTopics = st.checkbox("Reduce Topics", value=True, key="reduceTopicsBERT", )
         
-        numTopics = st.slider('Topic Count', 3, 40, 10, disabled = not reduceTopics)
-        
         minClusterSize = st.slider('Minimum Cluster Size', 5, 50, 15)
         
-        st.form_submit_button(label='Apply Options')
+    #-------Submit button
+    st.form_submit_button(label='Apply Filters')
+    
 #-------------------------------------------------------------
 df = df[(df[dateColumnName] >= pd.to_datetime(start_date)) & (df[dateColumnName] <= pd.to_datetime(end_date) + pd.Timedelta(days=1))]
 
@@ -255,10 +252,10 @@ flagWordsChart = CreateWordsOverTimeChart(df, textColumnName,dateColumnName, doc
 
 if flagWordsChart is not None:
     st.plotly_chart(flagWordsChart, use_container_width=True)
-
+ 
 #--Topic Extraction---------------------------------------------
-st.markdown("---")
-st.subheader("Topic Extraction")
+st.markdown("---",)
+st.subheader(f"Topic Extraction:", help='Each chart displays the top n (number can be slected in sidebar options) most descriptive words for each topic. ')
 
 if(selectedAlgo == 'BERTopic'):
     documents = df[textColumnName].values
@@ -289,6 +286,15 @@ elif(selectedAlgo == 'LDA') or (selectedAlgo == 'NMF'):
     topicDFs = GetTopics(topicExtractionModel, vectorizer, wordsPerTopic)
     
 df['Topic'] = docTopics
+
+#---Topic Search Box-----------------------------
+searchWord = st.text_input("Search Topics:")
+
+if selectedAlgo =='BERTopic' and searchWord:
+    similar_topics, similarity = bertModel.find_topics(searchWord, top_n=4)
+    for i in range(4):
+        if(similar_topics[i] >= 0):
+            st.write(f"Topic {similar_topics[i] + 1}: {similarity[i]:.2f}")
 
 #--Topic Word Charts-----------------------------
 
@@ -366,6 +372,13 @@ if(selectedAlgo == 'BERTopic'):
 
 st.markdown("---")
 st.subheader("Topic Analysis")
+
+#----Additional BERT Info-----------------------------------------
+if(selectedAlgo == 'BERTopic'):
+    st.write('\n')
+    unassignedCount = len(df[df['Topic'] == -1])
+    st.write(f'**Unassigned Documents: {unassignedCount}**')
+    
 #--Documents Per Topic Chart---------------------------------
 dfAssignedDocs = df[df['Topic'] >= 0]
 topic_document_count_df = dfAssignedDocs.groupby('Topic').size().reset_index(name='Document Count')
@@ -383,23 +396,18 @@ fig.update_layout(
     margin=dict(l=0, r=0, t=50, b=0),
     showlegend=False,
     title={
-        'text': f'Estimated Documents Per Topic',
+        'text': f'Documents Per Topic',
     },
 )
 
 st.plotly_chart(fig, use_container_width=True)
-
-#----Additional BERT Info-----------------------------------------
-if(selectedAlgo == 'BERTopic'):
-    st.write('\n')
-    unassignedCount = len(df[df['Topic'] == -1])
-    st.write(f'**Unassigned Documents: {unassignedCount}**')
         
 #----Topic Spread box Plot----------------------------------------
 probColumn = None
 if(selectedAlgo == 'BERTopic'):
     probColumn = 'Probs'
-
+st.write('\n')
+st.markdown('<p style="font-weight: bold;"> Distribution of Document Correlations Per Topic.</p>', help = 'Describes how correlated the assigned documents are to each topic. A longer/taller box implies a greater distinction between the documents in the topic. A higher box implies a closer association of the documents with the assigned topic', unsafe_allow_html=True)
 st.plotly_chart(GetTopicDocumentStats(dfTopicDistributions, numTopics, topicColors, probColumn), use_container_width=True)
 
 st.markdown("---")
@@ -501,7 +509,7 @@ if(selectedAlgo != 'BERTopic'):
 #----Raw Data----------------------------------------
 displayDF = GetDataFrame(dataFileName, textColumnName, dateColumnName)
 displayDF = displayDF[(displayDF[dateColumnName] >= pd.to_datetime(start_date)) & (displayDF[dateColumnName] <= pd.to_datetime(end_date) + pd.Timedelta(days=1))]
-st.subheader("Raw Data")
 st.markdown("---")
+st.subheader("Raw Data")
 displayDF['Topic'] = df['Topic'] + 1
 st.write(displayDF)
