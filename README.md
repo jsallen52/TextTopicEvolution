@@ -1,6 +1,6 @@
 # Text Topic Evolution App
 
-This application visualizes the evolution of topics in textual data using NMF and LDA topic extraction techniques.
+This application utilizes a verity of topic extraction methods to understand time stamped text data.
 
 ## Setup
 

@@ -5,3 +5,4 @@ streamlit==1.34.0
 plotly==5.22.0
 nltk==3.8.1
 BERTopic=0.16.2
+hdbscan=0.8.37
