@@ -137,9 +137,9 @@ with st.sidebar.form(key='filter_form'):
         vectorizer = CountVectorizer(stop_words= 'english' if useStopWords else None, ngram_range=(minNgram, maxNgram))
         X = vectorizer.fit(df[textColumnName])
 
-        useAdditionalStopWords = st.checkbox("Use Additional Stop Words", value=True, key="my_checkbox2", disabled=not useStopWords)
+        useAdditionalStopWords = st.checkbox("Ignore Additional Words", value=True, key="my_checkbox2", disabled=not useStopWords)
 
-        additional_stop_words = st.multiselect('Select Additional Stop Words', list(vectorizer.get_feature_names_out()), default=additional_stop_words, disabled= (not useAdditionalStopWords) or (not useStopWords))
+        additional_stop_words = st.multiselect('Select Additional Words to Ignore', list(vectorizer.get_feature_names_out()), default=additional_stop_words, disabled= (not useAdditionalStopWords) or (not useStopWords))
 
         if(not useStopWords):
             useAdditionalStopWords = False
@@ -472,7 +472,6 @@ st.subheader("Other Charts")
 
 if(selectedAlgo == 'BERTopic'):
     docFig = bertModel.visualize_documents(documents, hide_annotations=True)
-    docFig.to_plotly_json()
     docFig.update_layout(
         title = "Document Map",
         ) # margin=dict(t=0, b=0, l=0, r=0)
