@@ -115,20 +115,20 @@ with st.sidebar.form(key='filter_form'):
     options = ['Weekly', 'Monthly', 'Yearly']
     selectedTimeInterval = st.selectbox('Time Interval', options, index = 1)
     
-    topWordCount = st.slider('Top Words', 5, 50, 20)
+    topWordCount = st.slider('Top Words', 5, 50, 20,help='Number of words to display in the top word count chart')
     
     with st.expander("Advanced Options"):
     
-        minDocFreq = st.number_input('Minimum Document Frequency', 0, 100, 2)
-        maxDocFreq = st.number_input('Maximum Document Frequency', 0.0, 1.0, .95)
+        minDocFreq = st.number_input('Minimum Document Frequency', 0, 100, 2, help='Number of documents a word must appear in to be included in the analysis')
+        maxDocFreq = st.number_input('Maximum Document Frequency', 0.0, 1.0, .95, help='Maximum freuqency of documents a word can appear in to be included in the analysis')
         
-        minNgram = st.number_input('Minimum NGram', 1, 3, 1)
-        maxNgram = st.number_input('Maximum NGram', 1, 4, 1)
+        minNgram = st.number_input('Minimum NGram', 1, 3, 1, help='Minimum number of words in a ngram to be included in the analysis. eg. "1" is unigrams, "2" is bigrams, "3" is trigrams')
+        maxNgram = st.number_input('Maximum NGram', 1, 4, 1, help='Maximum number of words in a ngram to be included in the analysis. eg. "1" is unigrams, "2" is bigrams, "3" is trigrams')
         
         #-------Side Bar Parts of Speech
         st.subheader('Parts of Speech')
         # Filter for nouns only
-        useNounsOnly = st.checkbox("Nouns Only", value=True, key="nouns_only_checkbox")
+        useNounsOnly = st.checkbox("Nouns Only", value=True, key="nouns_only_checkbox", help='Only include nouns as part of the analysis. (Does not apply to BERTopic as all words are required to properly vectorize)')
         
         #-------Side Bar Stop Words
         st.subheader('Stop Words')
@@ -137,7 +137,7 @@ with st.sidebar.form(key='filter_form'):
         vectorizer = CountVectorizer(stop_words= 'english' if useStopWords else None, ngram_range=(minNgram, maxNgram))
         X = vectorizer.fit(df[textColumnName])
 
-        useAdditionalStopWords = st.checkbox("Ignore Additional Words", value=True, key="my_checkbox2", disabled=not useStopWords)
+        useAdditionalStopWords = st.checkbox("Ignore Additional Words", value=True, key="my_checkbox2", disabled=not useStopWords, help='Allows the choice for additional words to be ignored as a part of the analysis. (For BERTopic this only effects the the analysis of the topics but not the seperation of documents into topics)')
 
         additional_stop_words = st.multiselect('Select Additional Words to Ignore', list(vectorizer.get_feature_names_out()), default=additional_stop_words, disabled= (not useAdditionalStopWords) or (not useStopWords))
 
@@ -149,17 +149,16 @@ with st.sidebar.form(key='filter_form'):
         algoOptions = ['LDA', 'NMF', 'BERTopic']
         selectedAlgo = st.selectbox('Algorithm', algoOptions, index=2)
         
-        numTopicsDisabled = (selectedAlgo == 'BERTopic')
-        numTopics = st.slider('Topic Count', 3, 40, 10, disabled = numTopicsDisabled)
-        wordsPerTopic = st.slider('Words Per Topic', 8, 15, 10)
+        numTopics = st.slider('Topic Count', 3, 100, 20, help='Number of topics to extract from the text. For BERTopic this will be ignored unless reduce topics is enabled.')
+        wordsPerTopic = st.slider('Words Per Topic', 8, 15, 10, help='Number of words to display in each topic chart. Does not effect the performace of the topic extraction algorithms.')
 
         st.subheader('BERTopic Options')
-        reduceTopics = st.checkbox("Reduce Topics", value=True, key="reduceTopicsBERT", )
+        reduceTopics = st.checkbox("Reduce Topics", value=True, key="reduceTopicsBERT", help='Reduces the number of topics post HDBSCAN by combining the most similar topics.')
         
-        minClusterSize = st.slider('Minimum Cluster Size', 5, 50, 15)
+        minClusterSize = st.slider('Minimum Cluster Size', 5, 50, 15, help='Controls the mininum size of a cluster in the HDBSCAN layer of the BERTopic algorithm.')
         
     #-------Submit button
-    st.form_submit_button(label='Apply Filters')
+    st.form_submit_button(label='Apply Options')
     
 #-------------------------------------------------------------
 df = df[(df[dateColumnName] >= pd.to_datetime(start_date)) & (df[dateColumnName] <= pd.to_datetime(end_date) + pd.Timedelta(days=1))]
