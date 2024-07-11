@@ -267,6 +267,14 @@ if(selectedAlgo == 'BERTopic'):
     
     dfTopicDistributions = pd.DataFrame({'Probs': probs})
     dfTopicDistributions['Topic'] = docTopics
+    df['Topic'] = docTopics
+    
+    df['Props'] = dfTopicDistributions['Probs'].values
+    leastRepresentativeDocs = []
+    for i in range(numTopics):
+        topicFrame = df[df['Topic'] == i]
+        topicFrame = topicFrame.sort_values(by='Props', ascending=True)
+        leastRepresentativeDocs.append(topicFrame.head(3))
     
     representativeDocs = bertModel.get_representative_docs()
 
@@ -367,6 +375,14 @@ if(selectedAlgo == 'BERTopic'):
             st.subheader(f"Topic {topic_id + 1}:")
             for doc in docs[:numRepDocs]:
                 st.write(doc)
+    
+    with st.expander("**Least Representative Documents**"):
+        topic_id = 0
+        for topicFrame in leastRepresentativeDocs:
+            st.subheader(f"Topic {topic_id + 1}:")
+            for index, row in topicFrame.iterrows():
+                st.write(row[textColumnName])
+            topic_id += 1
 
 
 st.markdown("---")
@@ -534,4 +550,5 @@ displayDF = displayDF[(displayDF[dateColumnName] >= pd.to_datetime(start_date)) 
 st.markdown("---")
 st.subheader("Raw Data")
 displayDF['Topic'] = df['Topic'] + 1
+displayDF['Prob'] = dfTopicDistributions[probColumn].values
 st.write(displayDF)
