@@ -20,6 +20,8 @@ from bertopic import BERTopic
 from hdbscan import HDBSCAN
 from umap import UMAP
 
+import copy
+
 additional_stop_words = []
 
 # additional_stop_words= ['pilot', 'failure','control','resulted','loss','maintain','directional','flight','airplane','determined','reasons','available','based','contributing', 'improper', 'landing']
@@ -42,8 +44,8 @@ all_files = [f for f in os.listdir('.') if f.endswith(('.json', '.csv'))]
 # functions so any future calls with the same parameters will not be re-run
 #------------------------------------------------------
 
-@st.cache_resource
-def loadBertModel(_documents, numTopics, reduceTopics, wordsPerTopic, minClusterSize, _vectorizer, textColumnName, dateColumnName, startDate, endDate, minDF, maxDF, minNGram,maxNGram):
+@st.cache_resource 
+def loadBertModel(_documents, wordsPerTopic, minClusterSize, _vectorizer, textColumnName, dateColumnName, startDate, endDate, minDF, maxDF, minNGram,maxNGram):
     hdbscan = HDBSCAN(
         min_cluster_size=minClusterSize, 
         metric='euclidean', 
@@ -61,12 +63,27 @@ def loadBertModel(_documents, numTopics, reduceTopics, wordsPerTopic, minCluster
     bertModel = BERTopic(
         vectorizer_model=_vectorizer, 
         hdbscan_model=hdbscan, 
-        nr_topics= (numTopics + 1) if reduceTopics else None, # +1 for outlier
         top_n_words=wordsPerTopic,
     )
-    topics, probs = bertModel.fit_transform(_documents)
     
-    return bertModel, topics, probs
+    bertModel.fit(_documents)
+    
+    return bertModel
+
+@st.cache_resource
+def loadBertData(_bertModel, _documents, numTopics, reduceTopics, wordsPerTopic, minClusterSize, _vectorizer, textColumnName, dateColumnName, startDate, endDate, minDF, maxDF, minNGram,maxNGram):
+    
+    bertCopy = _bertModel
+    
+    if(reduceTopics):
+        # reduceing topics will directly change the cached model so a deep copy is needed to preserve the cache
+        bertCopy = copy.deepcopy(_bertModel)
+        # +1 to create numTopics including outlier
+        bertCopy.reduce_topics(_documents, nr_topics=numTopics + 1)
+           
+    topics, probs = bertCopy.transform(_documents)
+    
+    return bertCopy, topics, probs
 
 @st.cache_resource
 def loadLDA_NMF(selectedAlgo, numTopics, _docTermMatrix, textColumnName, dateColumnName, startDate, endDate, minDF, maxDF, minNGram,maxNGram):
@@ -260,7 +277,12 @@ st.subheader(f"Topic Extraction:", help='Each chart displays the top n (number c
 if(selectedAlgo == 'BERTopic'):
     documents = df[textColumnName].values
     
-    bertModel, docTopics, probs = loadBertModel(documents, numTopics, reduceTopics, wordsPerTopic, minClusterSize, vectorizer, textColumnName, dateColumnName, start_date, end_date, minDocFreq, maxDocFreq, minNgram,maxNgram)
+    bertModel = loadBertModel(documents, wordsPerTopic, minClusterSize, vectorizer, textColumnName, dateColumnName, start_date, end_date, minDocFreq, maxDocFreq, minNgram,maxNgram)
+    
+    st.write(f'**Topics Found:** {len(bertModel.get_topic_info()) - 1}')
+    st.write(f'**Reduced Topics:** {numTopics}')
+    
+    bertModel, docTopics, probs = loadBertData(bertModel, documents, numTopics, reduceTopics, wordsPerTopic, minClusterSize, vectorizer, textColumnName, dateColumnName, start_date, end_date, minDocFreq, maxDocFreq, minNgram,maxNgram)
     
     numTopics = len(bertModel.get_topic_info()) - 1
     
