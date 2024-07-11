@@ -126,10 +126,11 @@ def CreateWordsOverTimeChart(df, textColumnName, DateColumnName, docTermMatrix, 
         if df_grouped[word].tail(1).values[0] >= minDocumentCount:
             data.append(go.Scatter(x=df_grouped['TimeInterval'], y=df_grouped[word], mode='lines+markers', name=word))
 
-    layout = go.Layout(title='Flagged Words For Most Recent Time Interval',
+    layout = go.Layout(title='',
                     xaxis=dict(title='Time Interval'),
                     yaxis=dict(title='Document Count'),
-                    showlegend=True)  # Show the legend even if there is only one plot
+                    showlegend=True,
+                    margin=dict(t=20, b=0, l=0, r=0))  # Show the legend even if there is only one plot
 
     if(len(data) > 0):
         fig = go.Figure(data=data, layout=layout)

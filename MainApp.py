@@ -247,7 +247,7 @@ fig.update_yaxes(
 st.plotly_chart(fig, use_container_width=True)
 
 #------Flagged Words Chart--------------------------
-st.markdown('<p style="font-weight: bold;"> Flagged Words For Most Recent Time Interval</p>', help = '', unsafe_allow_html=True)
+st.markdown('<p style="font-weight: bold;"> Flagged Words For Most Recent Time Interval</p>', help = 'Flags the words for the most recent time interval and shows a chart tracking the number of documents containing each word over time.', unsafe_allow_html=True)
 flagWordsChart = CreateWordsOverTimeChart(df, textColumnName,dateColumnName, docTermMatrix, feature_names)
 
 if flagWordsChart is not None:
