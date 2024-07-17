@@ -9,7 +9,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from FlagFrequencies import CreateWordsOverTimeChart
 from PrepareData import AssignTimeInterval, GetDataFrame, GetFullDataFrame
 from DocumentsOverTime import CreateDocTimeFig
-from TopicExtraction import GetTopicDocumentStats, GetTopics, GetTopicsBERT
+from TopicExtraction import GetTopicDocumentStats, GetTopics_LDA_NMF, GetTopicsBERT
 
 import plotly.express as px
 import plotly.graph_objects as go
@@ -22,14 +22,13 @@ from umap import UMAP
 
 import copy
 
-additional_stop_words = []
+wordsToIgnore = []
 
-# additional_stop_words= ['pilot', 'failure','control','resulted','loss','maintain','directional','flight','airplane','determined','reasons','available','based','contributing', 'improper', 'landing']
+ignoreAdditionalWords = True
 
-useAdditionalStopWords = True
-
+# Default values for analysis
+# This will cause an error if 2020_2023.json is not in the root folder
 dataFileName = '2020_2023.json'
-#analysisNarrative
 textColumnName = 'cm_probableCause'
 dateColumnName = 'cm_eventDate'
 
@@ -37,15 +36,54 @@ dateColumnName = 'cm_eventDate'
 st.title('Text Topic Analysis')
 
 # Find all .json or .csv files in the root folder
+# to list them in the sidebar
 all_files = [f for f in os.listdir('.') if f.endswith(('.json', '.csv'))]
 
 #------Cache Functions---------------------------------
 # Streamlit will automatically cache the results of the 
 # functions so any future calls with the same parameters will not be re-run
+
+# Some parameters are passed into the function although they are not used. This is so any changes to these
+# parameters will cause the function to be re-run and not pulled from cache. DO NOT REMOVE THESE PARAMETERS
+
+# Parameters with and underscore in front (ex:_documents) are ingored when deteriming if the function should be loaded from cache
 #------------------------------------------------------
 
 @st.cache_resource 
-def loadBertModel(_documents, wordsPerTopic, minClusterSize, _vectorizer, textColumnName, dateColumnName, startDate, endDate, minDF, maxDF, minNGram,maxNGram):
+def loadBertModel(
+    _documents: list[str],
+    wordsPerTopic: int,
+    minClusterSize: int,
+    _vectorizer: CountVectorizer,
+    textColumnName: str,
+    dateColumnName: str,
+    startDate: str,
+    endDate: str,
+    minDF: int,
+    maxDF: int,
+    minNGram: int,
+    maxNGram: int
+) -> BERTopic:
+    """
+    Creates a BERTopic model and fits it to the documents.
+
+    Args:
+    _documents (List[str]): Documents to fit the model to
+    wordsPerTopic (int): Number of words to show per topic
+    minClusterSize (int): Min cluster size for HDBSCAN
+    _vectorizer (CountVectorizer): Vectorizer to use for calculating document embeddings
+    textColumnName (str): Name of the text column in the dataframe
+    dateColumnName (str): Name of the date column in the dataframe
+    startDate (str): Start of the date range
+    endDate (str): End of the date range
+    minDF (int): Minimum document frequency
+    maxDF (int): Maximum document frequency
+    minNGram (int): Minimum ngram
+    maxNGram (int): Maximum ngram
+
+    Returns:
+    BERTopic: BERTopic model
+    """
     hdbscan = HDBSCAN(
         min_cluster_size=minClusterSize, 
         metric='euclidean', 
@@ -53,6 +91,7 @@ def loadBertModel(_documents, wordsPerTopic, minClusterSize, _vectorizer, textCo
         prediction_data=True
     )
     
+    # Currently unsed. Default UMAP paramters are used in BERTopic model
     umap = UMAP(
         n_neighbors=15, 
         n_components=5, 
@@ -70,13 +109,52 @@ def loadBertModel(_documents, wordsPerTopic, minClusterSize, _vectorizer, textCo
     
     return bertModel
 
+
 @st.cache_resource
-def loadBertData(_bertModel, _documents, numTopics, reduceTopics, wordsPerTopic, minClusterSize, _vectorizer, textColumnName, dateColumnName, startDate, endDate, minDF, maxDF, minNGram,maxNGram):
-    
+def loadBertData(
+    _bertModel: BERTopic,
+    _documents: list[str],
+    numTopics: int,
+    reduceTopics: bool,
+    wordsPerTopic: int,
+    minClusterSize: int,
+    _vectorizer: CountVectorizer,
+    textColumnName: str,
+    dateColumnName: str,
+    startDate: str,
+    endDate: str,
+    minDF: float,
+    maxDF: float,
+    minNGram: int,
+    maxNGram: int
+) -> tuple[BERTopic, np.ndarray, np.ndarray]:
+    """
+    Load the BERTopic model, reduce topics, transform documents, and return the BERTopic model, topics, and probabilities. Reduce topics does not re-train the BERTopic model it just reduces the number of topics by combining similar topics from the already trained model.
+
+    Args:
+        _bertModel (BERTopic): The BERTopic model.
+        _documents (list[str]): The documents to transform.
+        numTopics (int): The number of topics to extract.
+        reduceTopics (bool): Whether to reduce the number of topics.
+        wordsPerTopic (int): The number of words to show per topic.
+        minClusterSize (int): The minimum cluster size for HDBSCAN.
+        _vectorizer (CountVectorizer): The vectorizer to use for calculating document embeddings.
+        textColumnName (str): The name of the text column in the dataframe.
+        dateColumnName (str): The name of the date column in the dataframe.
+        startDate (str): The start of the date range.
+        endDate (str): The end of the date range.
+        minDF (float): The minimum document frequency.
+        maxDF (float): The maximum document frequency.
+        minNGram (int): The minimum ngram.
+        maxNGram (int): The maximum ngram.
+
+    Returns:
+        Tuple[BERTopic, np.ndarray, np.ndarray]: The BERTopic model, topics, and probabilities.
+    """
     bertCopy = _bertModel
     
     if(reduceTopics):
-        # reduceing topics will directly change the cached model so a deep copy is needed to preserve the cache
+        # Reduce topics will directly change the cached model so a deep copy is needed to preserve the cache
         bertCopy = copy.deepcopy(_bertModel)
         # +1 to create numTopics including outlier
         bertCopy.reduce_topics(_documents, nr_topics=numTopics + 1)
@@ -86,25 +164,46 @@ def loadBertData(_bertModel, _documents, numTopics, reduceTopics, wordsPerTopic,
     return bertCopy, topics, probs
 
 @st.cache_resource
-def loadLDA_NMF(selectedAlgo, numTopics, _docTermMatrix, textColumnName, dateColumnName, startDate, endDate, minDF, maxDF, minNGram,maxNGram):
-    if(selectedAlgo == 'LDA'): 
+def loadLDA_NMF(selectedAlgo: str, numTopics: int, _docTermMatrix: np.ndarray, textColumnName: str, dateColumnName: str, startDate: str, endDate: str, minDF: float, maxDF: float, minNGram: int, maxNGram: int):
+    """
+    Load the selected topic extraction model and fit it to the document-term matrix.
+
+    Args:
+        selectedAlgo (str): The selected topic extraction algorithm.
+        numTopics (int): The number of topics to extract.
+        _docTermMatrix (np.ndarray): The document-term matrix.
+        textColumnName (str): The name of the text column in the data.
+        dateColumnName (str): The name of the date column in the data.
+        startDate (str): The start date for filtering data.
+        endDate (str): The end date for filtering data.
+        minDF (float): The minimum document frequency for filtering words.
+        maxDF (float): The maximum document frequency for filtering words.
+        minNGram (int): The minimum n-gram length for filtering words.
+        maxNGram (int): The maximum n-gram length for filtering words.
+
+    Returns:
+        A tuple containing the fitted topic extraction model and the transformed document-term matrix.
+    """
+    if selectedAlgo == 'LDA': 
         topicExtractionModel = LatentDirichletAllocation(n_components=numTopics, max_iter=50, learning_method='online')
         
-    elif(selectedAlgo == 'NMF'):
-        #NMF used TFIDF for vectorization
+    elif selectedAlgo == 'NMF':
         topicExtractionModel = NMF(n_components=numTopics)
         
     return topicExtractionModel, topicExtractionModel.fit_transform(_docTermMatrix)
 
 #-------Filters Side Bar-----------------------------------
 
+#Sets up Datasource dropdown on side bar with all of the .json and .csv files
 dataFileName = st.sidebar.selectbox('Data Source', all_files, index = all_files.index(dataFileName))
 
+#The following code sets up all of the parameter widgets in the side bar
 with st.sidebar.form(key='filter_form'):
     st.header('General Filters')
     
     df = GetFullDataFrame(dataFileName)
     #Gets all columns that are non integers and so will be converted into strings
+    # The goal is to filter out non text columns from the list in the sidebar
     all_columns = df.select_dtypes(include=['object']).columns.tolist()
     
     textIndex = 0
@@ -114,6 +213,7 @@ with st.sidebar.form(key='filter_form'):
     
     dateIndex = 0
     #Gets all columns with values that can be converted to dates
+    # The goal is to filter out non date columns from the list in the sidebar
     date_columns = [col for col in all_columns if pd.to_datetime(df[col], errors='coerce').notnull().all()]
     if(dataFileName == '2020_2023.json'):
         dateIndex = date_columns.index(dateColumnName)
@@ -122,6 +222,7 @@ with st.sidebar.form(key='filter_form'):
     # Create init dataframe
     df = GetDataFrame(dataFileName, textColumnName, dateColumnName)
     
+    #Get the date range from the earliest and latest date in the dataframe
     start_date, end_date = st.date_input(
         "Select Date Range",
         value=(df[dateColumnName].min(), df[dateColumnName].max()),
@@ -150,16 +251,17 @@ with st.sidebar.form(key='filter_form'):
         #-------Side Bar Stop Words
         st.subheader('Stop Words')
         useStopWords = st.checkbox("Use Standard Stop Words", value=True, key="stop_words_checkbox")
-
+    
+        #Gets the full list of words to add as options in ignore words selection
         vectorizer = CountVectorizer(stop_words= 'english' if useStopWords else None, ngram_range=(minNgram, maxNgram))
         X = vectorizer.fit(df[textColumnName])
 
-        useAdditionalStopWords = st.checkbox("Ignore Additional Words", value=True, key="my_checkbox2", disabled=not useStopWords, help='Allows the choice for additional words to be ignored as a part of the analysis. (For BERTopic this only effects the the analysis of the topics but not the seperation of documents into topics)')
+        ignoreAdditionalWords = st.checkbox("Ignore Additional Words", value=True, key="my_checkbox2", disabled=not useStopWords, help='Allows the choice for additional words to be ignored as a part of the analysis. (For BERTopic this only effects the the analysis of the topics but not the seperation of documents into topics)')
 
-        additional_stop_words = st.multiselect('Select Additional Words to Ignore', list(vectorizer.get_feature_names_out()), default=additional_stop_words, disabled= (not useAdditionalStopWords) or (not useStopWords))
+        wordsToIgnore = st.multiselect('Select Additional Words to Ignore', list(vectorizer.get_feature_names_out()), default=wordsToIgnore, disabled= (not ignoreAdditionalWords) or (not useStopWords))
 
         if(not useStopWords):
-            useAdditionalStopWords = False
+            ignoreAdditionalWords = False
             
         #-------Side Bar Topic Extraction
         st.subheader('Topic Extraction')
@@ -188,7 +290,7 @@ df = AssignTimeInterval(df, dateColumnName, selectedTimeInterval)
 # Create columns
 col1, col2, col3 = st.columns(3)
 
-# Define box content and styles
+# Define box content and styles for general stats at the top of page
 box_style = """
     <div style="
         background-color: #f0f0f0; 
@@ -206,9 +308,10 @@ documentCount = format(df.shape[0], ',')
 
 all_stop_words = list(CountVectorizer(stop_words='english').get_stop_words()) if useStopWords else None
 
-if(useAdditionalStopWords):
-    all_stop_words = all_stop_words + additional_stop_words
+if(ignoreAdditionalWords):
+    all_stop_words = all_stop_words + wordsToIgnore
 
+# Basic CountVectorizer for Top Words Frequency Chart. Uses any filter options
 vectorizer = CountVectorizer(stop_words=all_stop_words, max_df=maxDocFreq, min_df=minDocFreq, ngram_range=(minNgram, maxNgram))
 
 docTermMatrix = vectorizer.fit_transform(df[textColumnName])
@@ -265,7 +368,7 @@ st.plotly_chart(fig, use_container_width=True)
 
 #------Flagged Words Chart--------------------------
 st.markdown('<p style="font-weight: bold;"> Flagged Words For Most Recent Time Interval</p>', help = 'Flags the words for the most recent time interval and shows a chart tracking the number of documents containing each word over time.', unsafe_allow_html=True)
-flagWordsChart = CreateWordsOverTimeChart(df, textColumnName,dateColumnName, docTermMatrix, feature_names)
+flagWordsChart = CreateWordsOverTimeChart(df, textColumnName,dateColumnName)
 
 if flagWordsChart is not None:
     st.plotly_chart(flagWordsChart, use_container_width=True)
@@ -280,7 +383,7 @@ if(selectedAlgo == 'BERTopic'):
     bertModel = loadBertModel(documents, wordsPerTopic, minClusterSize, vectorizer, textColumnName, dateColumnName, start_date, end_date, minDocFreq, maxDocFreq, minNgram,maxNgram)
     
     st.write(f'**Topics Found:** {len(bertModel.get_topic_info()) - 1}')
-    st.write(f'**Reduced Topics:** {numTopics}')
+    if(reduceTopics): st.write(f'**Reduced Topics:** {numTopics}')
     
     bertModel, docTopics, probs = loadBertData(bertModel, documents, numTopics, reduceTopics, wordsPerTopic, minClusterSize, vectorizer, textColumnName, dateColumnName, start_date, end_date, minDocFreq, maxDocFreq, minNgram,maxNgram)
     
@@ -313,12 +416,13 @@ elif(selectedAlgo == 'LDA') or (selectedAlgo == 'NMF'):
 
     docTopics = np.argmax(documentTopicDistributions, axis=1)
     dfTopicDistributions['Topic'] = docTopics
-    topicDFs = GetTopics(topicExtractionModel, vectorizer, wordsPerTopic)
-    
+    topicDFs = GetTopics_LDA_NMF(topicExtractionModel, vectorizer, wordsPerTopic)
+
+# Adds Topic column to df with the assigned topic for each document
 df['Topic'] = docTopics
 
 #---Topic Search Box-----------------------------
-searchWord = st.text_input("Search Topics:")
+if selectedAlgo == 'BERTopic': searchWord = st.text_input("Search Topics:")
 
 if selectedAlgo =='BERTopic' and searchWord:
     similar_topics, similarity = bertModel.find_topics(searchWord, top_n=4)
@@ -328,6 +432,7 @@ if selectedAlgo =='BERTopic' and searchWord:
 
 #--Topic Word Charts-----------------------------
 
+# Defines the list of unique colors for different topic related charts
 topicColors = [
     '#800000', 
     '#469990', 
@@ -352,8 +457,8 @@ topicColors = [
     '#dcbeff',
 ]
 
-
-topicColors = topicColors * 10
+# Increases the size of the color list based on the number of topics (Repeats the list)
+topicColors = topicColors * (int(numTopics / len(topicColors)) + 1)
 
 st.write('\n')
 
@@ -390,6 +495,7 @@ for i in range(numTopics):
 #----Topic Representative Docs-----------------------------
 numRepDocs = 3
 if(selectedAlgo == 'BERTopic'):
+    #Shows the 3 most representative documents for each topic. (Documents with the highest probabilities of being related to the topic
     with st.expander("**Representative Documents**"):
         # st.header('')
         for topic_id, docs in representativeDocs.items():
@@ -399,6 +505,7 @@ if(selectedAlgo == 'BERTopic'):
             for doc in docs[:numRepDocs]:
                 st.write(doc)
     
+    #Shows the 3 least representative documents for each topic. (Documents with the lowest probabilities of being related to the topic
     with st.expander("**Least Representative Documents**"):
         topic_id = 0
         for topicFrame in leastRepresentativeDocs:
@@ -461,8 +568,9 @@ st.plotly_chart(docFig)
 if(selectedAlgo == 'LDA' or selectedAlgo == 'NMF'):
     st.markdown("---")
     st.subheader("Topic and Document Maps")
+    
 #---Topic Map---------------------------------
-if(selectedAlgo != 'BERTopic'):
+if(selectedAlgo == 'LDA' or selectedAlgo == 'NMF'):
     ldaComponents = topicExtractionModel.components_
     reducedTopicWordMatrix = TSNE(n_components=2, perplexity=numTopics-1).fit_transform(topicExtractionModel.components_)
 

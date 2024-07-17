@@ -6,31 +6,6 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 
 import plotly.graph_objects as go
 
-# textColumnName = 'cm_probableCause'
-# dateColumnName = 'cm_eventDate'
-
-# df = pd.read_json('2020_2023.json')
-
-# df = df[[dateColumnName, textColumnName]]
-# df = df.dropna(subset=[textColumnName, dateColumnName], inplace=False) 
-# df[dateColumnName] = pd.to_datetime(df[dateColumnName]).dt.tz_localize(None)
-
-# df['Month'] = df[dateColumnName].dt.to_period('M')
-
-# df = df.groupby('Month')[textColumnName].apply(lambda x: ' '.join(x)).reset_index()
-
-# vectorizer = TfidfVectorizer(stop_words='english',  max_df=0.95)
-# docTermMatrix = vectorizer.fit_transform(df[textColumnName])
-
-# lastRow = pd.DataFrame(docTermMatrix.toarray(), columns=vectorizer.get_feature_names_out()).tail(1).reset_index(drop=True).T
-
-# lastRowSorted = lastRow.sort_values(0, ascending=False)
-
-
-# topTenArray = lastRowSorted.index[:10].values
-
-# print(topTenArray)
-
 def GetTopRecentWordsTFIDF(df, textColumnName, dateColumnName, numWords):
     df['Month'] = df[dateColumnName].dt.to_period('M')
 
@@ -76,7 +51,21 @@ def GetFlaggedRecentWordsZscore(df, textColumnName, dateColumnName, numWords):
     
     return topTenArray
 
-def GetTopRecentWordsCTFIDF(df, textColumnName, dateColumnName, numWords):
+
+
+def GetTopRecentWordsCTFIDF(df: pd.DataFrame, textColumnName: str, dateColumnName: str, numWords: int) -> np.ndarray:
+    """
+    Gets the words for hte most recent time interval using the C-TF-IDF method
+
+    Args:
+        df (pd.DataFrame): The input dataframe.
+        textColumnName (str): The name of the text column.
+        dateColumnName (str): The name of the date column.
+        numWords (int): The number of top words to retrieve.
+
+    Returns:
+        np.ndarray: An array of top recent words.
+    """
     df['Month'] = df[dateColumnName].dt.to_period('M')
 
     interval_df = df.groupby('Month')[textColumnName].apply(lambda x: ' '.join(x)).reset_index()
@@ -97,16 +86,28 @@ def GetTopRecentWordsCTFIDF(df, textColumnName, dateColumnName, numWords):
     
     return topTenArray
 
-def CreateWordsOverTimeChart(df, textColumnName, DateColumnName, docTermMatrix, featureNames):
-    vectorizer = CountVectorizer(stop_words='english',  max_df=0.95)
+def CreateWordsOverTimeChart(df: pd.DataFrame, textColumnName: str, dateColumnName: str) -> go.Figure:
+    """
+    Creates a line graph using Plotly with word frequencies over time for the flagged words found in the most recent time interval
+
+    Args:
+        df (pd.DataFrame): The input dataframe.
+        textColumnName (str): The name of the text column.
+        dateColumnName (str): The name of the date column.
+
+    Returns:
+        go.Figure: The Plotly figure object for the line graph, or None if there is no data to plot.
+    """
+    vectorizer = CountVectorizer(stop_words='english')
     docTermMatrix = vectorizer.fit_transform(df[textColumnName])
     featureNames = vectorizer.get_feature_names_out()
     
-    word_list = GetTopRecentWordsCTFIDF(df, textColumnName, DateColumnName, 14)
+    word_list = GetTopRecentWordsCTFIDF(df, textColumnName, dateColumnName, 10)
     
     word_counts = pd.DataFrame(docTermMatrix.toarray(), columns=featureNames)
     word_counts['TimeInterval'] = df['TimeInterval'].values
     
+    # Marks which documents have each word rather than the count of each word for each document
     for word in word_list:
         word_counts.loc[word_counts[word] > 0, word] = 1
         word_counts.loc[word_counts[word] == 0, word] = 0
