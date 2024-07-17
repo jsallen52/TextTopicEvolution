@@ -6,3 +6,4 @@ plotly==5.22.0
 nltk==3.8.1
 BERTopic=0.16.2
 hdbscan=0.8.37
+umap-learn=0.5.6

@@ -1,0 +1,132 @@
+// Required Dependencies for each package included in dependencies.txt in Alphabetical order
+// (Packages with no dependencies are listed on the bottom)
+
+BERTopic:
+    hdbscan, numpy, pandas, plotly, scikit-learn, sentence-transformers, tqdm, umap-learn
+
+altair:
+    jinja2, jsonschema, numpy, packaging, pandas, toolz
+
+gitdb:
+    smmap
+
+gitpython:
+    gitdb
+
+hdbscan:
+    cython, joblib, numpy, scikit-learn, scipy
+
+huggingface-hub:
+    filelock, fsspec, packaging, pyyaml, requests, tqdm, typing-extensions
+
+jinja2:
+    MarkupSafe
+
+jsonschema:
+    attrs, jsonschema-specifications, referencing, rpds-py
+
+jsonschema-specifications:
+    referencing
+
+markdown-it-py:
+    mdurl
+
+nltk:
+    click, joblib, regex, tqdm
+
+numba:
+    llvmlite, numpy
+
+pandas:
+    numpy, python-dateutil, pytz, tzdata
+
+plotly:
+    packaging, tenacity
+
+pyarrow:
+    numpy
+
+pydeck:
+    jinja2, numpy
+
+pynndescent:
+    joblib, llvmlite, numba, scikit-learn, scipy
+
+python-dateutil:
+    six
+
+referencing:
+    attrs, rpds-py
+
+requests:
+    certifi, charset-normalizer, idna, urllib3
+
+rich:
+    markdown-it-py, pygments
+
+scikit-learn:
+    joblib, numpy, scipy, threadpoolctl
+
+scipy:
+    numpy
+
+sentence-transformers:
+    huggingface-hub, numpy, Pillow, scikit-learn, scipy, torch, tqdm, transformers
+
+streamlit:
+    altair, blinker, cachetools, click, gitpython, numpy, packaging, pandas, pillow, protobuf, pyarrow, pydeck, requests, rich, tenacity, toml, tornado, typing-extensions
+
+sympy:
+    mpmath
+
+tokenizers:
+    huggingface-hub
+
+torch:
+    filelock, fsspec, jinja2, networkx, sympy, typing-extensions
+
+transformers:
+    filelock, huggingface-hub, numpy, packaging, pyyaml, regex, requests, safetensors, tokenizers, tqdm
+
+umap-learn:
+    numba, numpy, pynndescent, scikit-learn, scipy, tqdm
+
+//No Required Dependencies:
+MarkupSafe requires: None
+Pillow requires: None
+attrs requires: None
+blinker requires: None
+cachetools requires: None
+certifi requires: None
+charset-normalizer requires: None
+click requires: None
+cython requires: None
+filelock requires: None
+fsspec requires: None
+idna requires: None
+joblib requires: None
+llvmlite requires: None
+mdurl requires: None
+mpmath requires: None
+networkx requires: None
+numpy requires: None
+packaging requires: None
+pillow requires: None
+protobuf requires: None
+pygments requires: None
+pytz requires: None
+pyyaml requires: None
+regex requires: None
+rpds-py requires: None
+safetensors requires: None
+six requires: None
+smmap requires: None
+tenacity requires: None
+threadpoolctl requires: None
+toml requires: None
+toolz requires: None
+tornado requires: None
+tqdm requires: None
+typing-extensions requires: None
+tzdata requires: None
+urllib3 requires: None
