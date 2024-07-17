@@ -395,11 +395,11 @@ if(selectedAlgo == 'BERTopic'):
     dfTopicDistributions['Topic'] = docTopics
     df['Topic'] = docTopics
     
-    df['Props'] = dfTopicDistributions['Probs'].values
+    df['Probs'] = dfTopicDistributions['Probs'].values
     leastRepresentativeDocs = []
     for i in range(numTopics):
         topicFrame = df[df['Topic'] == i]
-        topicFrame = topicFrame.sort_values(by='Props', ascending=True)
+        topicFrame = topicFrame.sort_values(by='Probs', ascending=True)
         leastRepresentativeDocs.append(topicFrame.head(3))
     
     representativeDocs = bertModel.get_representative_docs()
@@ -676,10 +676,10 @@ if(selectedAlgo == 'NMF' or selectedAlgo == 'LDA'):
     st.plotly_chart(fig, use_container_width=True)
 
 #----Raw Data----------------------------------------
-displayDF = GetDataFrame(dataFileName, textColumnName, dateColumnName)
-displayDF = displayDF[(displayDF[dateColumnName] >= pd.to_datetime(start_date)) & (displayDF[dateColumnName] <= pd.to_datetime(end_date) + pd.Timedelta(days=1))]
-st.markdown("---")
-st.subheader("Raw Data")
-displayDF['Topic'] = df['Topic'] + 1
-displayDF['Prob'] = dfTopicDistributions[probColumn].values
-st.write(displayDF)
+# displayDF = GetDataFrame(dataFileName, textColumnName, dateColumnName)
+# displayDF = displayDF[(displayDF[dateColumnName] >= pd.to_datetime(start_date)) & (displayDF[dateColumnName] <= pd.to_datetime(end_date) + pd.Timedelta(days=1))]
+# st.markdown("---")
+# st.subheader("Raw Data")
+# displayDF['Topic'] = df['Topic'] + 1
+# displayDF['Prob'] = dfTopicDistributions[probColumn].values
+st.write(df)
