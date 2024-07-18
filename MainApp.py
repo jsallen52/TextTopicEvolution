@@ -193,6 +193,7 @@ def loadLDA_NMF(selectedAlgo: str, numTopics: int, _docTermMatrix: np.ndarray, t
     return topicExtractionModel, topicExtractionModel.fit_transform(_docTermMatrix)
 
 #-------Filters Side Bar-----------------------------------
+autoFindColumns = True
 
 #Sets up Datasource dropdown on side bar with all of the .json and .csv files
 dataFileName = st.sidebar.selectbox('Data Source', all_files, index = all_files.index(dataFileName))
@@ -204,20 +205,35 @@ with st.sidebar.form(key='filter_form'):
     df = GetFullDataFrame(dataFileName)
     #Gets all columns that are non integers and so will be converted into strings
     # The goal is to filter out non text columns from the list in the sidebar
-    all_columns = df.select_dtypes(include=['object']).columns.tolist()
     
-    textIndex = 0
-    if(dataFileName == '2020_2023.json'):
-        textIndex = all_columns.index(textColumnName)
-    textColumnName = st.selectbox('Text Column',all_columns, index=textIndex, key="text_column_name")
+    if(autoFindColumns):
+        all_columns = df.select_dtypes(include=['object']).columns.tolist()
+        
+        textIndex = 0
+        if(dataFileName == '2020_2023.json'):
+            textIndex = all_columns.index(textColumnName)
+        textColumnName = st.selectbox('Text Column',all_columns, index=textIndex, key="text_column_name")
+        
+        dateIndex = 0
+        #Gets all columns with values that can be converted to dates
+        # The goal is to filter out non date columns from the list in the sidebar
+        date_columns = [col for col in all_columns if pd.to_datetime(df[col].head(5), errors='coerce').notnull().all()]
+        if(dataFileName == '2020_2023.json'):
+            dateIndex = date_columns.index(dateColumnName)
+        dateColumnName = st.selectbox('Date Column', date_columns,index=dateIndex, key="date_column_name")
+    else:
+        all_columns = df.columns.tolist()
+        
+        textIndex = 0
+        if(dataFileName == '2020_2023.json'):
+            textIndex = all_columns.index(textColumnName)
+        textColumnName = st.selectbox('Text Column',all_columns, index=textIndex, key="text_column_name")
+        
+        dateIndex = 8
+        if(dataFileName == '2020_2023.json'):
+            dateIndex = all_columns.index(dateColumnName)
+        dateColumnName = st.selectbox('Date Column', all_columns,index=dateIndex, key="date_column_name")
     
-    dateIndex = 0
-    #Gets all columns with values that can be converted to dates
-    # The goal is to filter out non date columns from the list in the sidebar
-    date_columns = [col for col in all_columns if pd.to_datetime(df[col], errors='coerce').notnull().all()]
-    if(dataFileName == '2020_2023.json'):
-        dateIndex = date_columns.index(dateColumnName)
-    dateColumnName = st.selectbox('Date Column', date_columns,index=dateIndex, key="date_column_name")
     
     # Create init dataframe
     df = GetDataFrame(dataFileName, textColumnName, dateColumnName)
@@ -274,7 +290,7 @@ with st.sidebar.form(key='filter_form'):
         st.subheader('BERTopic Options')
         reduceTopics = st.checkbox("Reduce Topics", value=True, key="reduceTopicsBERT", help='Reduces the number of topics post HDBSCAN by combining the most similar topics.')
         
-        minClusterSize = st.slider('Minimum Cluster Size', 5, 50, 15, help='Controls the mininum size of a cluster in the HDBSCAN layer of the BERTopic algorithm.')
+        minClusterSize = st.slider('Minimum Cluster Size', 5, 100, 15, help='Controls the mininum size of a cluster in the HDBSCAN layer of the BERTopic algorithm.')
         
     #-------Submit button
     st.form_submit_button(label='Apply Options')
@@ -676,10 +692,24 @@ if(selectedAlgo == 'NMF' or selectedAlgo == 'LDA'):
     st.plotly_chart(fig, use_container_width=True)
 
 #----Raw Data----------------------------------------
-# displayDF = GetDataFrame(dataFileName, textColumnName, dateColumnName)
-# displayDF = displayDF[(displayDF[dateColumnName] >= pd.to_datetime(start_date)) & (displayDF[dateColumnName] <= pd.to_datetime(end_date) + pd.Timedelta(days=1))]
-# st.markdown("---")
-# st.subheader("Raw Data")
-# displayDF['Topic'] = df['Topic'] + 1
-# displayDF['Prob'] = dfTopicDistributions[probColumn].values
+st.markdown("---")
+st.subheader("Raw Data")
+displayDF = GetDataFrame(dataFileName, textColumnName, dateColumnName)
+displayDF = displayDF[(displayDF[dateColumnName] >= pd.to_datetime(start_date)) & (displayDF[dateColumnName] <= pd.to_datetime(end_date) + pd.Timedelta(days=1))]
+displayDF['Topic'] = df['Topic'] + 1
+displayDF['Prob'] = dfTopicDistributions[probColumn].values
 st.write(df)
+
+def convert_df_to_csv(df):
+    return df.to_csv(index=False).encode('utf-8')
+
+# Convert the DataFrame to CSV
+csv = convert_df_to_csv(df)
+
+# Create a download button
+st.download_button(
+    label="Download data as CSV",
+    data=csv,
+    file_name='data.csv',
+    mime='text/csv',
+)
