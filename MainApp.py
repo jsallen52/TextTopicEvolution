@@ -538,7 +538,8 @@ st.subheader("Topic Analysis")
 if(selectedAlgo == 'BERTopic'):
     st.write('\n')
     unassignedCount = len(df[df['Topic'] == -1])
-    st.write(f'**Unassigned Documents: {unassignedCount}**')
+    unassignedPercent = unassignedCount/len(df)
+    st.write(f'**Unassigned Documents: {unassignedCount} | Percent: {unassignedPercent:.2%}**')
     
 #--Documents Per Topic Chart---------------------------------
 dfAssignedDocs = df[df['Topic'] >= 0]
@@ -650,6 +651,13 @@ if(selectedAlgo == 'BERTopic'):
         title = "Topic Map",
         ) # margin=dict(t=0, b=0, l=0, r=0)
     st.plotly_chart(topicFig, use_container_width=True)
+    
+    topicsOverTime = bertModel.topics_over_time(documents, df[dateColumnName].values,nr_bins=15)
+    topicsOverTimeFig = bertModel.visualize_topics_over_time(topicsOverTime)
+    # topicsOverTimeFig.update_layout(
+    #     title = "Topics over Time DTM",
+    #     ) # margin=dict(t=0, b=0, l=0, r=0)
+    st.plotly_chart(topicsOverTimeFig, use_container_width=True)
     
 
 if(selectedAlgo == 'NMF' or selectedAlgo == 'LDA'):
