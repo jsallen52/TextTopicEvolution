@@ -64,3 +64,4 @@ typing-extensions
 tzdata
 umap-learn
 urllib3
+streamlit
