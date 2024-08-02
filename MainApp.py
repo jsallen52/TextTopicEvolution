@@ -702,7 +702,7 @@ if(selectedAlgo == 'NMF' or selectedAlgo == 'LDA'):
 #----Raw Data----------------------------------------
 st.markdown("---")
 st.subheader("Raw Data")
-displayDF = GetDataFrame(dataFileName, textColumnName, dateColumnName)
+displayDF = GetDataFrame(dataFileName, textColumnName, dateColumnName, filterOutColumns=False)
 displayDF = displayDF[(displayDF[dateColumnName] >= pd.to_datetime(start_date)) & (displayDF[dateColumnName] <= pd.to_datetime(end_date) + pd.Timedelta(days=1))]
 displayDF['Topic'] = df['Topic'] + 1
 displayDF['Prob'] = dfTopicDistributions[probColumn].values

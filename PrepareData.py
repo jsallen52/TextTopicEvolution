@@ -16,7 +16,7 @@ def GetFullDataFrame(fileName):
         df = pd.read_csv(fileName)
     return df
 
-def GetDataFrame(fileName, textColumnName, dateColumnName):
+def GetDataFrame(fileName, textColumnName, dateColumnName, filterOutColumns = True):
     """
     Read a DataFrame from a CSV or JSON file, select specific columns, and process the date column.
     
@@ -33,7 +33,8 @@ def GetDataFrame(fileName, textColumnName, dateColumnName):
     else:
         df = pd.read_csv(fileName)
     
-    df = df[[dateColumnName, textColumnName]]
+    if(filterOutColumns):
+        df = df[[dateColumnName, textColumnName]]
     #drop any columns that do not have a date or text
     df = df.dropna(subset=[textColumnName, dateColumnName], inplace=False) 
     df[dateColumnName] = pd.to_datetime(df[dateColumnName]).dt.tz_localize(None)
