@@ -196,7 +196,7 @@ def loadLDA_NMF(selectedAlgo: str, numTopics: int, _docTermMatrix: np.ndarray, t
 autoFindColumns = True
 
 #Sets up Datasource dropdown on side bar with all of the .json and .csv files
-dataFileName = st.sidebar.selectbox('Data Source', all_files, index = all_files.index(dataFileName))
+dataFileName = st.sidebar.selectbox('Data Source', all_files, index = all_files.index(dataFileName), help="Add source to this list by placing the .csv or .json file in the root application folder which contains MainApp.py. They must have a proper text and date column.")
 
 #The following code sets up all of the parameter widgets in the side bar
 with st.sidebar.form(key='filter_form'):
@@ -212,15 +212,15 @@ with st.sidebar.form(key='filter_form'):
         textIndex = 0
         if(dataFileName == '2020_2023.json'):
             textIndex = all_columns.index(textColumnName)
-        textColumnName = st.selectbox('Text Column',all_columns, index=textIndex, key="text_column_name")
+        textColumnName = st.selectbox('Text Column',all_columns, index=textIndex, key="text_column_name", help="The column that contains the text to be analyzed.")
         
         dateIndex = 0
         #Gets all columns with values that can be converted to dates
         # The goal is to filter out non date columns from the list in the sidebar
-        date_columns = [col for col in all_columns if pd.to_datetime(df[col].head(5), errors='coerce').notnull().all()]
+        date_columns = [col for col in all_columns if pd.to_datetime(df[col].head(20), errors='coerce').notnull().all()]
         if(dataFileName == '2020_2023.json'):
             dateIndex = date_columns.index(dateColumnName)
-        dateColumnName = st.selectbox('Date Column', date_columns,index=dateIndex, key="date_column_name")
+        dateColumnName = st.selectbox('Date Column', date_columns,index=dateIndex, key="date_column_name", help="The column that contains the dates to be analyzed.")
     else:
         all_columns = df.columns.tolist()
         
@@ -241,13 +241,14 @@ with st.sidebar.form(key='filter_form'):
     #Get the date range from the earliest and latest date in the dataframe
     start_date, end_date = st.date_input(
         "Select Date Range",
-        value=(df[dateColumnName].min(), df[dateColumnName].max()),
+        value=(df[dateColumnName].min(), min(df[dateColumnName].max(), df[dateColumnName].min() + pd.Timedelta(days=365))),
         format="MM/DD/YYYY",
-        key="date_range"
+        key="date_range",
+        help='Filter data by date range. Defaults to one year.'
     )
     
     options = ['Weekly', 'Monthly', 'Yearly']
-    selectedTimeInterval = st.selectbox('Time Interval', options, index = 1)
+    selectedTimeInterval = st.selectbox('Time Interval', options, index = 1, help='Select the time interval used by the time series charts')
     
     topWordCount = st.slider('Top Words', 5, 50, 20,help='Number of words to display in the top word count chart')
     
@@ -282,7 +283,7 @@ with st.sidebar.form(key='filter_form'):
         #-------Side Bar Topic Extraction
         st.subheader('Topic Extraction')
         algoOptions = ['LDA', 'NMF', 'BERTopic']
-        selectedAlgo = st.selectbox('Algorithm', algoOptions, index=2)
+        selectedAlgo = st.selectbox('Algorithm', algoOptions, index=2, help="See the README.md for algorithm detals.")
         
         numTopics = st.slider('Topic Count', 3, 100, 20, help='Number of topics to extract from the text. For BERTopic this will be ignored unless reduce topics is enabled.')
         wordsPerTopic = st.slider('Words Per Topic', 8, 15, 10, help='Number of words to display in each topic chart. Does not effect the performace of the topic extraction algorithms.')
@@ -706,13 +707,13 @@ displayDF = GetDataFrame(dataFileName, textColumnName, dateColumnName, filterOut
 displayDF = displayDF[(displayDF[dateColumnName] >= pd.to_datetime(start_date)) & (displayDF[dateColumnName] <= pd.to_datetime(end_date) + pd.Timedelta(days=1))]
 displayDF['Topic'] = df['Topic'] + 1
 displayDF['Prob'] = dfTopicDistributions[probColumn].values
-st.write(df)
+st.write(displayDF)
 
-def convert_df_to_csv(df):
+def convert_df_to_csv(displayDF):
     return df.to_csv(index=False).encode('utf-8')
 
 # Convert the DataFrame to CSV
-csv = convert_df_to_csv(df)
+csv = convert_df_to_csv(displayDF)
 
 # Create a download button
 st.download_button(

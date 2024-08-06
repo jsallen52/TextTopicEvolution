@@ -13,6 +13,22 @@ This application utilizes a verity of topic extraction methods to understand tim
     - see https://www.nltk.org/data.html# for more details
 4. Run the Streamlit app by navigating to the cloned folder and executing `streamlit run MainApp.py`.
 5. Open the app in your browser at `http://localhost:8501`.
+6. To add a data source place the .csv or .json formated data file into the root folder of the application with MainApp.py
+
+## Basic Topic Extraction Algorithms Info
+### NFM & LDA
+NMF or Non-Negative Matrix factorization is a technique used for matrix dimensionality reduction. The algorithm decomposes a matrix into two smaller matrices generally called the basic and coefficient matrices. The starting matrix for Topic Modeling is the TF-IDF vector matrix of the text documents. 
+
+LDA is a generative probabilistic model for topic extraction. It works on the assumptiuon that documents are mixtures of topics and topics are mixtures of words. The model uses a Bayesian framework to infer the hidden structure of topics within a corpus. 
+
+Both algorithms create a **Topic-Term Matrix** which describes the probability for each word being a part of each topic and a **Document-Topic Matrix** which respresents the probability for each document belonging to each Topic although they use different methods.
+
+Neither algorithm requires the model to have any prior knowlege of the language or sentance structure.
+
+### BERTopic
+BERTopic uses a pertrained BERT(Bidirectional Encoder Representations from Transformers) to vectorize the documents text. This vecotorization is heavily dependant on the sentance structure of the text. It may also not perform as well with less commonly used words or acroynyms. Replacing acronyms with the actual words they respresent or using LDA or NMF is reccomended if the results of the algorithm aren't ideal.
+
+For detailed information see: https://maartengr.github.io/BERTopic/index.html
 
 ## Additional Chart Info
 ### <u>Flagged Words for Most Recent Time Interval:</u>
