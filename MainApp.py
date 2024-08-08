@@ -706,7 +706,8 @@ st.subheader("Raw Data")
 displayDF = GetDataFrame(dataFileName, textColumnName, dateColumnName, filterOutColumns=False)
 displayDF = displayDF[(displayDF[dateColumnName] >= pd.to_datetime(start_date)) & (displayDF[dateColumnName] <= pd.to_datetime(end_date) + pd.Timedelta(days=1))]
 displayDF['Topic'] = df['Topic'] + 1
-displayDF['Prob'] = dfTopicDistributions[probColumn].values
+if(selectedAlgo == 'BERTopic'):
+    displayDF['Prob'] = dfTopicDistributions[probColumn].values
 st.write(displayDF)
 
 def convert_df_to_csv(displayDF):
