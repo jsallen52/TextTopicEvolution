@@ -217,7 +217,7 @@ with st.sidebar.form(key='filter_form'):
         dateIndex = 0
         #Gets all columns with values that can be converted to dates
         # The goal is to filter out non date columns from the list in the sidebar
-        date_columns = [col for col in all_columns if pd.to_datetime(df[col].head(20), errors='coerce').notnull().all()]
+        date_columns = [col for col in all_columns if pd.to_datetime(df[col].head(20), errors='coerce').notnull().any()]
         if(dataFileName == '2020_2023.json'):
             dateIndex = date_columns.index(dateColumnName)
         dateColumnName = st.selectbox('Date Column', date_columns,index=dateIndex, key="date_column_name", help="The column that contains the dates to be analyzed.")
