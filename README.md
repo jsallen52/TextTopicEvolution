@@ -26,7 +26,7 @@ Both algorithms create a **Topic-Term Matrix** which describes the probability f
 Neither algorithm requires the model to have any prior knowlege of the language or sentance structure.
 
 ### BERTopic
-BERTopic uses a pretrained BERT(Bidirectional Encoder Representations from Transformers) to vectorize the documents text. This vecotorization is heavily dependant on the sentance structure of the text. It may also not perform as well with less commonly used words or acroynyms. Replacing acronyms with the actual words they respresent or using LDA or NMF is reccomended if the results of the algorithm aren't ideal.
+BERTopic uses a pretrained BERT(Bidirectional Encoder Representations from Transformers) to vectorize the documents text. This vecotorization is heavily dependant on the sentance structure of the text. It may not perform as well with less commonly used words or acroynyms. Replacing acronyms with the actual words they represent or using LDA or NMF is recommended if the results of the algorithm aren't ideal.
 
 For detailed information see: https://maartengr.github.io/BERTopic/index.html
 
